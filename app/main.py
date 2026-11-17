@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.models import Project, ProjectFile, Review, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.review import (
     ProjectFileResponse,
     ProjectResponse,
@@ -125,6 +126,92 @@ def list_projects(
         )
         for project in current_user.projects
     ]
+
+
+@app.post("/api/v1/projects", response_model=ProjectResponse, status_code=201, tags=["projects"])
+def create_project(
+    request: ProjectCreateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectResponse:
+    """Create an empty project owned by the authenticated user."""
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Project name cannot be blank")
+    existing_project = (
+        database.query(Project)
+        .filter(Project.owner_id == current_user.id, Project.name == name)
+        .one_or_none()
+    )
+    if existing_project is not None:
+        raise HTTPException(status_code=409, detail="Project name already exists")
+
+    project = Project(owner=current_user, name=name)
+    database.add(project)
+    database.commit()
+    database.refresh(project)
+    return ProjectResponse(id=project.id, name=project.name, files=[])
+
+
+@app.patch("/api/v1/projects/{project_id}", response_model=ProjectResponse, tags=["projects"])
+def update_project(
+    project_id: int,
+    request: ProjectUpdateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectResponse:
+    """Rename an owned project."""
+    project = (
+        database.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Project name cannot be blank")
+    duplicate = (
+        database.query(Project)
+        .filter(
+            Project.owner_id == current_user.id,
+            Project.name == name,
+            Project.id != project_id,
+        )
+        .one_or_none()
+    )
+    if duplicate is not None:
+        raise HTTPException(status_code=409, detail="Project name already exists")
+
+    project.name = name
+    database.commit()
+    database.refresh(project)
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
+    )
+
+
+@app.delete("/api/v1/projects/{project_id}", status_code=204, tags=["projects"])
+def delete_project(
+    project_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Delete an owned project and its related files and reviews."""
+    project = (
+        database.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    database.delete(project)
+    database.commit()
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse, tags=["projects"])

@@ -64,3 +64,9 @@ def test_projects_require_authentication() -> None:
     response = client.get("/api/v1/projects")
 
     assert response.status_code == 401
+
+
+def test_project_creation_requires_authentication() -> None:
+    response = client.post("/api/v1/projects", json={"name": "demo"})
+
+    assert response.status_code == 401
