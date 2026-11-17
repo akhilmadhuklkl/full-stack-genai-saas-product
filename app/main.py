@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path, PurePosixPath
 
-from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -477,10 +477,15 @@ def list_files(
     project_id: int,
     database: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    search: str | None = None,
 ) -> list[FileResponse]:
     """List files belonging to an owned project."""
     project = _get_owned_project(project_id, current_user, database)
-    return [_to_file_response(project_file) for project_file in project.files]
+    files = project.files
+    if search:
+        search_term = search.lower()
+        files = [project_file for project_file in files if search_term in project_file.path.lower()]
+    return [_to_file_response(project_file) for project_file in files]
 
 
 @app.get("/api/v1/files/{file_id}", response_model=FileResponse, tags=["files"])
@@ -622,6 +627,7 @@ def list_reviews(
     project_id: int,
     database: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    review_status: str | None = Query(default=None, alias="status"),
 ) -> list[ReviewSummaryResponse]:
     """List review runs for one project."""
     project = (
@@ -632,6 +638,9 @@ def list_reviews(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    reviews = project.reviews
+    if review_status:
+        reviews = [review for review in reviews if review.status == review_status]
     return [
         ReviewSummaryResponse(
             id=review.id,
@@ -639,7 +648,7 @@ def list_reviews(
             status=review.status,
             summary=review.summary,
         )
-        for review in project.reviews
+        for review in reviews
     ]
 
 
@@ -648,6 +657,7 @@ def get_review(
     review_id: int,
     database: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    severity: str | None = None,
 ) -> ReviewDetailResponse:
     """Return one review and its structured findings."""
     review = (
@@ -659,6 +669,9 @@ def get_review(
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
 
+    findings = review.findings
+    if severity:
+        findings = [finding for finding in findings if finding.severity == severity.lower()]
     return ReviewDetailResponse(
         id=review.id,
         project_id=review.project_id,
@@ -674,7 +687,7 @@ def get_review(
                 explanation=finding.explanation,
                 recommendation=finding.recommendation,
             )
-            for finding in review.findings
+            for finding in findings
         ],
     )
 

@@ -63,6 +63,8 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .archive-form button { width: 100%; }
 .archive-form .muted { min-height: 18px; margin-top: 8px; font-size: 11px; }
 .file-list { display: grid; gap: 8px; margin-top: 18px; }
+.compact-input { margin-top: 15px; padding: 9px 11px; font-size: 12px; }
+.section-heading select { border: 1px solid var(--line); border-radius: 8px; padding: 7px; color: var(--muted); background: white; font-size: 11px; }
 .file-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: #f7f9f5; border-radius: 8px; font-family: monospace; font-size: 12px; }
 .file-row button { border: 0; background: transparent; color: var(--danger); font-size: 11px; }
 .review-button { width: 100%; display: flex; justify-content: space-between; margin: 22px 0; }

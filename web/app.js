@@ -51,8 +51,7 @@ async function selectProject(id) {
   $('project-name').textContent = state.selectedProject.name;
   $('project-count').textContent = `${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
   $('run-review').disabled = state.files.length === 0;
-  $('file-list').innerHTML = state.files.length ? state.files.map((file) => `<div class="file-row"><span>${file.path}</span><button data-file-id="${file.id}">remove</button></div>`).join('') : '<div class="empty-state">No files in this project yet.</div>';
-  document.querySelectorAll('[data-file-id]').forEach((button) => { button.onclick = () => removeFile(Number(button.dataset.fileId)); });
+  renderFiles();
   await loadReviewHistory();
   await loadStats();
   await loadProjects();
@@ -69,11 +68,19 @@ async function loadStats() {
 
 async function loadReviewHistory() {
   if (!state.selectedProject) return;
-  const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews`);
+  const filter = $('review-status-filter').value;
+  const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews${filter ? `?status=${encodeURIComponent(filter)}` : ''}`);
   if (!response.ok) { $('review-history').innerHTML = '<div class="error-text">Could not load review history.</div>'; return; }
   const reviews = await response.json();
   $('review-history').innerHTML = reviews.length ? reviews.slice().reverse().map((review) => `<button data-review-id="${review.id}"><span>Review #${review.id}</span><small>${review.status}</small></button>`).join('') : '<div class="empty-state">No review runs yet.</div>';
   document.querySelectorAll('[data-review-id]').forEach((button) => { button.onclick = () => showReview(Number(button.dataset.reviewId)); });
+}
+
+function renderFiles() {
+  const search = $('file-search').value.toLowerCase();
+  const files = state.files.filter((file) => file.path.toLowerCase().includes(search));
+  $('file-list').innerHTML = files.length ? files.map((file) => `<div class="file-row"><span>${file.path}</span><button data-file-id="${file.id}">remove</button></div>`).join('') : '<div class="empty-state">No matching files.</div>';
+  document.querySelectorAll('[data-file-id]').forEach((button) => { button.onclick = () => removeFile(Number(button.dataset.fileId)); });
 }
 
 async function createProject() {
@@ -147,6 +154,8 @@ $('new-project').onclick = createProject;
 $('file-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const response = await api(`/api/v1/projects/${state.selectedProject.id}/files`, { method: 'POST', body: JSON.stringify({ path: $('file-path').value, content: $('file-content').value }) }); if (response.ok) { $('file-path').value = ''; $('file-content').value = ''; await selectProject(state.selectedProject.id); toast('File added'); } else toast('Could not add file'); };
 $('archive-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const input = $('archive-input'); if (!input.files.length) return toast('Choose a ZIP archive first'); $('archive-status').textContent = 'Importing archive…'; const formData = new FormData(); formData.append('archive', input.files[0]); const response = await uploadApi(`/api/v1/projects/${state.selectedProject.id}/archive`, formData); if (!response.ok) { $('archive-status').textContent = 'Import failed'; return toast('Could not import archive'); } const result = await response.json(); $('archive-status').textContent = `${result.imported_files} imported · ${result.skipped_files} skipped`; input.value = ''; await selectProject(state.selectedProject.id); toast('Archive imported'); };
 $('run-review').onclick = runReview;
+$('file-search').oninput = renderFiles;
+$('review-status-filter').onchange = loadReviewHistory;
 
 renderAuth();
 if (state.token) loadProjects().catch(() => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); });

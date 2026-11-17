@@ -55,6 +55,7 @@
                 <button class="secondary-button" type="submit">Import archive</button>
                 <div id="archive-status" class="muted"></div>
               </form>
+              <input id="file-search" class="compact-input" placeholder="Search files by path" />
               <div id="file-list" class="file-list"><div class="empty-state">Create or select a project to begin.</div></div>
             </section>
 
@@ -70,7 +71,7 @@
                 <div class="stat-card"><span>Findings</span><strong>—</strong></div>
               </div>
               <div class="history-block">
-                <div class="section-heading compact"><div><span class="eyebrow">History</span><h3>Previous reviews</h3></div></div>
+                <div class="section-heading compact"><div><span class="eyebrow">History</span><h3>Previous reviews</h3></div><select id="review-status-filter"><option value="">All statuses</option><option value="queued">Queued</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option></select></div>
                 <div id="review-history" class="review-history"><div class="empty-state">No review runs yet.</div></div>
               </div>
             </section>
