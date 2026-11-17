@@ -1,11 +1,20 @@
+from pathlib import PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ReviewFile(BaseModel):
     path: str = Field(min_length=1, max_length=500)
     content: str = Field(min_length=1, max_length=100_000)
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        path = PurePosixPath(value.strip())
+        if not value.strip() or path.is_absolute() or ".." in path.parts:
+            raise ValueError("File path must be a safe relative path")
+        return path.as_posix()
 
 
 class ReviewRequest(BaseModel):

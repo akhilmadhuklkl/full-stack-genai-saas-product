@@ -1,7 +1,7 @@
 def test_authenticated_review_workflow(client, fake_review_service) -> None:
     registration = client.post(
         "/api/v1/auth/register",
-        json={"email": "workflow@example.com", "password": "password-123"},
+        json={"email": "workflow@example.com", "password": "StrongPass123"},
     )
     assert registration.status_code == 201
     headers = {"Authorization": f"Bearer {registration.json()['access_token']}"}

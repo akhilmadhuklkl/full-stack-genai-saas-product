@@ -15,7 +15,7 @@ def test_health_check() -> None:
 def test_create_review_returns_queued_review() -> None:
     auth = client.post(
         "/api/v1/auth/register",
-        json={"email": "test@example.com", "password": "password-123"},
+        json={"email": "test@example.com", "password": "StrongPass123"},
     )
     response = client.post(
         "/api/v1/reviews",
@@ -36,7 +36,7 @@ def test_create_review_returns_queued_review() -> None:
 def test_create_review_rejects_empty_file_list() -> None:
     auth = client.post(
         "/api/v1/auth/register",
-        json={"email": "empty@example.com", "password": "password-123"},
+        json={"email": "empty@example.com", "password": "StrongPass123"},
     )
     response = client.post(
         "/api/v1/reviews",
@@ -50,7 +50,7 @@ def test_create_review_rejects_empty_file_list() -> None:
 def test_missing_project_returns_not_found() -> None:
     auth = client.post(
         "/api/v1/auth/register",
-        json={"email": "missing@example.com", "password": "password-123"},
+        json={"email": "missing@example.com", "password": "StrongPass123"},
     )
     response = client.get(
         "/api/v1/projects/999999",
@@ -120,6 +120,55 @@ def test_archive_upload_requires_authentication(client) -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_weak_password_is_rejected(client) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "secure@example.com", "password": "password-123"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_direct_file_path_traversal_is_rejected(client) -> None:
+    registration = client.post(
+        "/api/v1/auth/register",
+        json={"email": "paths@example.com", "password": "StrongPass123"},
+    )
+    headers = {"Authorization": f"Bearer {registration.json()['access_token']}"}
+    project = client.post("/api/v1/projects", headers=headers, json={"name": "safe"})
+    project_id = project.json()["id"]
+
+    response = client.post(
+        f"/api/v1/projects/{project_id}/files",
+        headers=headers,
+        json={"path": "../secret.txt", "content": "private"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_users_cannot_read_each_others_projects(client) -> None:
+    first = client.post(
+        "/api/v1/auth/register",
+        json={"email": "owner@example.com", "password": "StrongPass123"},
+    )
+    second = client.post(
+        "/api/v1/auth/register",
+        json={"email": "other@example.com", "password": "StrongPass123"},
+    )
+    first_headers = {"Authorization": f"Bearer {first.json()['access_token']}"}
+    second_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    project = client.post(
+        "/api/v1/projects", headers=first_headers, json={"name": "private-project"}
+    )
+
+    response = client.get(
+        f"/api/v1/projects/{project.json()['id']}", headers=second_headers
+    )
+
+    assert response.status_code == 404
 
 
 def test_project_stats_requires_authentication(client) -> None:
