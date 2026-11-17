@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.db.models import Project, ProjectFile, Review, User
+from app.db.models import Project, ProjectFile, Review, ReviewFinding, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
@@ -18,6 +18,7 @@ from app.schemas.review import (
     ReviewResponse,
     ReviewSummaryResponse,
 )
+from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRequest
 from app.security import create_access_token, hash_password, verify_password
 
 
@@ -430,4 +431,97 @@ def get_review(
             )
             for finding in review.findings
         ],
+    )
+
+
+def _get_owned_review(review_id: int, current_user: User, database: Session) -> Review:
+    review = (
+        database.query(Review)
+        .join(Project)
+        .filter(Review.id == review_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
+
+
+@app.patch(
+    "/api/v1/reviews/{review_id}/status",
+    response_model=ReviewSummaryResponse,
+    tags=["reviews"],
+)
+def update_review_status(
+    review_id: int,
+    request: ReviewStatusUpdateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewSummaryResponse:
+    """Move a review through its processing lifecycle."""
+    review = _get_owned_review(review_id, current_user, database)
+    allowed_transitions = {
+        "queued": {"processing", "failed"},
+        "processing": {"completed", "failed"},
+        "completed": set(),
+        "failed": set(),
+    }
+    if request.status != review.status and request.status not in allowed_transitions[review.status]:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot move review from {review.status} to {request.status}",
+        )
+
+    review.status = request.status
+    if request.summary is not None:
+        review.summary = request.summary
+    database.commit()
+    database.refresh(review)
+    return ReviewSummaryResponse(
+        id=review.id,
+        project_id=review.project_id,
+        status=review.status,
+        summary=review.summary,
+    )
+
+
+@app.post(
+    "/api/v1/reviews/{review_id}/findings",
+    response_model=ReviewFindingResponse,
+    status_code=201,
+    tags=["reviews"],
+)
+def create_finding(
+    review_id: int,
+    request: FindingCreateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewFindingResponse:
+    """Add one structured finding to an owned review."""
+    review = _get_owned_review(review_id, current_user, database)
+    if review.status not in {"queued", "processing"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Findings can only be added while a review is active",
+        )
+
+    finding = ReviewFinding(
+        review=review,
+        severity=request.severity.lower(),
+        file_path=request.file_path.strip(),
+        line_number=request.line_number,
+        title=request.title.strip(),
+        explanation=request.explanation,
+        recommendation=request.recommendation,
+    )
+    database.add(finding)
+    database.commit()
+    database.refresh(finding)
+    return ReviewFindingResponse(
+        id=finding.id,
+        severity=finding.severity,
+        file_path=finding.file_path,
+        line_number=finding.line_number,
+        title=finding.title,
+        explanation=finding.explanation,
+        recommendation=finding.recommendation,
     )

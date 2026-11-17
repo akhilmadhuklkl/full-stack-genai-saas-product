@@ -79,3 +79,12 @@ def test_file_creation_requires_authentication() -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_review_status_update_requires_authentication() -> None:
+    response = client.patch(
+        "/api/v1/reviews/1/status",
+        json={"status": "processing"},
+    )
+
+    assert response.status_code == 401
