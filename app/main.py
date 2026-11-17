@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
+from app.cache import cache
 from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, UsageRecord, User
 from app.db.session import create_tables, get_db
@@ -38,6 +39,10 @@ from app.schemas.usage import UsageResponse
 from app.security import create_access_token, hash_password, verify_password
 
 review_service = OllamaReviewService()
+
+
+def project_cache_key(user_id: int) -> str:
+    return f"forge:projects:{user_id}"
 
 
 @asynccontextmanager
@@ -169,7 +174,11 @@ def list_projects(
     database: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> list[ProjectResponse]:
     """List projects belonging to the authenticated user."""
-    return [
+    cached = cache.get_json(project_cache_key(current_user.id))
+    if cached is not None:
+        return [ProjectResponse.model_validate(project) for project in cached]
+
+    projects = [
         ProjectResponse(
             id=project.id,
             name=project.name,
@@ -177,6 +186,11 @@ def list_projects(
         )
         for project in current_user.projects
     ]
+    cache.set_json(
+        project_cache_key(current_user.id),
+        [project.model_dump() for project in projects],
+    )
+    return projects
 
 
 @app.post("/api/v1/projects", response_model=ProjectResponse, status_code=201, tags=["projects"])
@@ -201,6 +215,7 @@ def create_project(
     database.add(project)
     database.commit()
     database.refresh(project)
+    cache.delete(project_cache_key(current_user.id))
     return ProjectResponse(id=project.id, name=project.name, files=[])
 
 
@@ -238,6 +253,7 @@ def update_project(
     project.name = name
     database.commit()
     database.refresh(project)
+    cache.delete(project_cache_key(current_user.id))
     return ProjectResponse(
         id=project.id,
         name=project.name,
@@ -262,6 +278,7 @@ def delete_project(
 
     database.delete(project)
     database.commit()
+    cache.delete(project_cache_key(current_user.id))
     return Response(status_code=204)
 
 
@@ -315,6 +332,7 @@ def create_file(
     database.add(project_file)
     database.commit()
     database.refresh(project_file)
+    cache.delete(project_cache_key(current_user.id))
     return _to_file_response(project_file)
 
 
@@ -392,6 +410,7 @@ def delete_file(
 
     database.delete(project_file)
     database.commit()
+    cache.delete(project_cache_key(current_user.id))
     return Response(status_code=204)
 
 

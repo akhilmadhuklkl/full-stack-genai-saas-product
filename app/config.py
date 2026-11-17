@@ -11,6 +11,7 @@ class Settings:
     auth_secret: str
     ollama_base_url: str
     ollama_model: str
+    redis_url: str | None
 
 
 def load_settings() -> Settings:
@@ -21,6 +22,7 @@ def load_settings() -> Settings:
         auth_secret=os.getenv("AUTH_SECRET", "local-development-secret"),
         ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
+        redis_url=os.getenv("REDIS_URL") or None,
     )
 
 
