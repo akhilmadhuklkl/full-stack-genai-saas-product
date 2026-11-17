@@ -105,3 +105,9 @@ def test_usage_requires_authentication(client) -> None:
     response = client.get("/api/v1/me/usage")
 
     assert response.status_code == 401
+
+
+def test_job_status_requires_authentication(client) -> None:
+    response = client.get("/api/v1/jobs/1")
+
+    assert response.status_code == 401

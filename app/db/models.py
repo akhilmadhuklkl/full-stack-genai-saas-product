@@ -88,3 +88,16 @@ class UsageRecord(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     user: Mapped[User] = relationship(back_populates="usage_records")
+
+
+class ReviewJob(Base):
+    __tablename__ = "review_jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="queued")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    review: Mapped[Review] = relationship()

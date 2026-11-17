@@ -13,9 +13,10 @@ from sqlalchemy.orm import Session
 from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.cache import cache
 from app.config import settings
-from app.db.models import Project, ProjectFile, Review, ReviewFinding, UsageRecord, User
+from app.db.models import Project, ProjectFile, Review, ReviewFinding, ReviewJob, UsageRecord, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
+from app.jobs import enqueue_review
 from app.limits import review_rate_limiter
 from app.observability import (
     RequestLoggingMiddleware,
@@ -24,6 +25,7 @@ from app.observability import (
 )
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
+from app.schemas.job import JobResponse
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.review import (
     ProjectFileResponse,
@@ -166,6 +168,65 @@ def get_usage(
         period_start=period_start,
         period_end=period_end,
         limit=review_rate_limiter.max_requests,
+    )
+
+
+@app.post(
+    "/api/v1/reviews/{review_id}/enqueue",
+    response_model=JobResponse,
+    status_code=202,
+    tags=["jobs"],
+)
+def enqueue_review_job(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JobResponse:
+    """Queue a review and return immediately with its job status."""
+    review = _get_owned_review(review_id, current_user, database)
+    if review.status != "queued":
+        raise HTTPException(status_code=409, detail="Only queued reviews can be enqueued")
+    if database.query(ReviewJob).filter(ReviewJob.review_id == review.id).one_or_none():
+        raise HTTPException(status_code=409, detail="Review already has a job")
+
+    job = ReviewJob(review=review, status="queued")
+    database.add(job)
+    database.commit()
+    database.refresh(job)
+    enqueue_review(review.id, review_service)
+    return JobResponse(
+        id=job.id,
+        review_id=job.review_id,
+        status=job.status,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        completed_at=job.completed_at,
+    )
+
+
+@app.get("/api/v1/jobs/{job_id}", response_model=JobResponse, tags=["jobs"])
+def get_job(
+    job_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JobResponse:
+    """Return the status of an owned review job."""
+    job = (
+        database.query(ReviewJob)
+        .join(Review)
+        .join(Project)
+        .filter(ReviewJob.id == job_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JobResponse(
+        id=job.id,
+        review_id=job.review_id,
+        status=job.status,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        completed_at=job.completed_at,
     )
 
 
