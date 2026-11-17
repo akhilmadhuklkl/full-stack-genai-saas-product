@@ -1,11 +1,19 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.models import Project, ProjectFile, Review, User
 from app.db.session import create_tables, get_db
-from app.schemas.review import ReviewRequest, ReviewResponse
+from app.schemas.review import (
+    ProjectFileResponse,
+    ProjectResponse,
+    ReviewDetailResponse,
+    ReviewFindingResponse,
+    ReviewRequest,
+    ReviewResponse,
+    ReviewSummaryResponse,
+)
 
 
 @asynccontextmanager
@@ -73,4 +81,86 @@ def create_review(request: ReviewRequest, database: Session = Depends(get_db)) -
         review_id=str(review.id),
         status="queued",
         message=f"Review accepted for {len(request.files)} file(s).",
+    )
+
+
+@app.get("/api/v1/projects", response_model=list[ProjectResponse], tags=["projects"])
+def list_projects(database: Session = Depends(get_db)) -> list[ProjectResponse]:
+    """List projects belonging to the local development user."""
+    user = database.query(User).filter(User.email == "local-dev@example.com").one_or_none()
+    if user is None:
+        return []
+
+    return [
+        ProjectResponse(
+            id=project.id,
+            name=project.name,
+            files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
+        )
+        for project in user.projects
+    ]
+
+
+@app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse, tags=["projects"])
+def get_project(project_id: int, database: Session = Depends(get_db)) -> ProjectResponse:
+    """Return one project and its file paths."""
+    project = database.query(Project).filter(Project.id == project_id).one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
+    )
+
+
+@app.get(
+    "/api/v1/projects/{project_id}/reviews",
+    response_model=list[ReviewSummaryResponse],
+    tags=["reviews"],
+)
+def list_reviews(
+    project_id: int, database: Session = Depends(get_db)
+) -> list[ReviewSummaryResponse]:
+    """List review runs for one project."""
+    project = database.query(Project).filter(Project.id == project_id).one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return [
+        ReviewSummaryResponse(
+            id=review.id,
+            project_id=review.project_id,
+            status=review.status,
+            summary=review.summary,
+        )
+        for review in project.reviews
+    ]
+
+
+@app.get("/api/v1/reviews/{review_id}", response_model=ReviewDetailResponse, tags=["reviews"])
+def get_review(review_id: int, database: Session = Depends(get_db)) -> ReviewDetailResponse:
+    """Return one review and its structured findings."""
+    review = database.query(Review).filter(Review.id == review_id).one_or_none()
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    return ReviewDetailResponse(
+        id=review.id,
+        project_id=review.project_id,
+        status=review.status,
+        summary=review.summary,
+        findings=[
+            ReviewFindingResponse(
+                id=finding.id,
+                severity=finding.severity,
+                file_path=finding.file_path,
+                line_number=finding.line_number,
+                title=finding.title,
+                explanation=finding.explanation,
+                recommendation=finding.recommendation,
+            )
+            for finding in review.findings
+        ],
     )

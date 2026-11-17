@@ -35,3 +35,9 @@ def test_create_review_rejects_empty_file_list() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_missing_project_returns_not_found() -> None:
+    response = client.get("/api/v1/projects/999999")
+
+    assert response.status_code == 404

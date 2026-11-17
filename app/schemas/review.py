@@ -17,3 +17,35 @@ class ReviewResponse(BaseModel):
     review_id: str
     status: Literal["queued", "processing", "completed", "failed"]
     message: str
+
+
+class ProjectFileResponse(BaseModel):
+    id: int
+    path: str
+
+
+class ProjectResponse(BaseModel):
+    id: int
+    name: str
+    files: list[ProjectFileResponse]
+
+
+class ReviewFindingResponse(BaseModel):
+    id: int
+    severity: str
+    file_path: str
+    line_number: int | None
+    title: str
+    explanation: str
+    recommendation: str
+
+
+class ReviewSummaryResponse(BaseModel):
+    id: int
+    project_id: int
+    status: Literal["queued", "processing", "completed", "failed"]
+    summary: str | None
+
+
+class ReviewDetailResponse(ReviewSummaryResponse):
+    findings: list[ReviewFindingResponse]
