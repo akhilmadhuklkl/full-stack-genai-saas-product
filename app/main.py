@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
+from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
@@ -20,6 +21,8 @@ from app.schemas.review import (
 )
 from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRequest
 from app.security import create_access_token, hash_password, verify_password
+
+review_service = OllamaReviewService()
 
 
 @asynccontextmanager
@@ -524,4 +527,66 @@ def create_finding(
         title=finding.title,
         explanation=finding.explanation,
         recommendation=finding.recommendation,
+    )
+
+
+@app.post(
+    "/api/v1/reviews/{review_id}/run",
+    response_model=ReviewDetailResponse,
+    tags=["reviews"],
+)
+def run_review(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewDetailResponse:
+    """Run the local Ollama reviewer and persist its findings."""
+    review = _get_owned_review(review_id, current_user, database)
+    if review.status != "queued":
+        raise HTTPException(status_code=409, detail="Only queued reviews can be run")
+
+    review.status = "processing"
+    database.commit()
+    files = [(project_file.path, project_file.content) for project_file in review.project.files]
+
+    try:
+        result = review_service.review(review.project.name, files)
+        for finding in result.findings:
+            review.findings.append(
+                ReviewFinding(
+                    severity=finding.severity,
+                    file_path=finding.file_path,
+                    line_number=finding.line_number,
+                    title=finding.title,
+                    explanation=finding.explanation,
+                    recommendation=finding.recommendation,
+                )
+            )
+        review.summary = result.summary
+        review.status = "completed"
+        database.commit()
+        database.refresh(review)
+    except AIReviewError as error:
+        review.status = "failed"
+        review.summary = str(error)
+        database.commit()
+        raise HTTPException(status_code=502, detail="The local AI reviewer failed") from error
+
+    return ReviewDetailResponse(
+        id=review.id,
+        project_id=review.project_id,
+        status=review.status,
+        summary=review.summary,
+        findings=[
+            ReviewFindingResponse(
+                id=finding.id,
+                severity=finding.severity,
+                file_path=finding.file_path,
+                line_number=finding.line_number,
+                title=finding.title,
+                explanation=finding.explanation,
+                recommendation=finding.recommendation,
+            )
+            for finding in review.findings
+        ],
     )
