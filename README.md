@@ -36,6 +36,18 @@ Open http://127.0.0.1:8000/docs for the interactive API documentation.
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.
 
+Apply database migrations with:
+
+```powershell
+alembic upgrade head
+```
+
+Create a new migration after changing a model with:
+
+```powershell
+alembic revision --autogenerate -m "describe the schema change"
+```
+
 Run tests with:
 
 ```powershell
