@@ -41,3 +41,6 @@ Run tests with:
 ```powershell
 pytest
 ```
+
+The test suite uses an isolated in-memory SQLite database and a deterministic fake AI
+reviewer. It does not call Ollama or modify the local development database.

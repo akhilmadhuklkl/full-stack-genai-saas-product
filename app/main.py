@@ -1,4 +1,5 @@
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -31,7 +32,8 @@ review_service = OllamaReviewService()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    create_tables()
+    if os.getenv("APP_ENV", "development") != "test":
+        create_tables()
     yield
 
 
