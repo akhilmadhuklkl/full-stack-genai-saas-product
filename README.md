@@ -18,8 +18,23 @@ Web UI -> API gateway -> Business logic API
 
 ## Development status
 
-Project setup only. Application implementation will be added incrementally.
+Milestone 1: backend foundation and the first code-review API contract.
 
 ## Local setup
 
-The stack and setup instructions will be documented here as the application is scaffolded.
+Requirements: Python 3.11+.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000/docs for the interactive API documentation.
+
+Run tests with:
+
+```powershell
+pytest
+```
