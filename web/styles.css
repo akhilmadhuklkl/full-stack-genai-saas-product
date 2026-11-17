@@ -58,6 +58,10 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .count-badge, .status-badge { border-radius: 99px; background: #f0f3ee; color: var(--muted); font-size: 11px; padding: 7px 10px; white-space: nowrap; }
 .status-badge { background: var(--accent); color: #50610c; font-weight: 800; }
 .file-form { border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.archive-form { border-bottom: 1px solid var(--line); padding: 12px 0 20px; }
+.archive-form input[type="file"] { padding: 9px; font-size: 12px; }
+.archive-form button { width: 100%; }
+.archive-form .muted { min-height: 18px; margin-top: 8px; font-size: 11px; }
 .file-list { display: grid; gap: 8px; margin-top: 18px; }
 .file-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: #f7f9f5; border-radius: 8px; font-family: monospace; font-size: 12px; }
 .file-row button { border: 0; background: transparent; color: var(--danger); font-size: 11px; }

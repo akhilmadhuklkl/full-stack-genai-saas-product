@@ -50,6 +50,11 @@
                 <label>Source content<textarea id="file-content" required placeholder="Paste a file to review..."></textarea></label>
                 <button class="secondary-button" type="submit">Add file</button>
               </form>
+              <form id="archive-form" class="archive-form">
+                <label>Import project ZIP<input id="archive-input" type="file" accept=".zip,application/zip" required /></label>
+                <button class="secondary-button" type="submit">Import archive</button>
+                <div id="archive-status" class="muted"></div>
+              </form>
               <div id="file-list" class="file-list"><div class="empty-state">Create or select a project to begin.</div></div>
             </section>
 
