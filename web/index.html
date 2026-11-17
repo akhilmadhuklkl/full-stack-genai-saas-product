@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge Review — AI Code Intelligence</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">F</span><span>Forge Review</span></div>
+        <div class="eyebrow">Workspace</div>
+        <div id="project-list" class="project-list"></div>
+        <button id="new-project" class="ghost-button" type="button">+ New project</button>
+        <div class="sidebar-footer"><span class="status-dot"></span> Local AI online</div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">Code intelligence workspace</div>
+            <h1 id="page-title">Welcome to Forge Review</h1>
+          </div>
+          <div id="account-area" class="account-area"></div>
+        </header>
+
+        <section id="auth-panel" class="auth-panel panel">
+          <div class="auth-copy">
+            <span class="pill">LOCAL-FIRST AI</span>
+            <h2>Ship code with more confidence.</h2>
+            <p>Review your project with a private local model that surfaces concrete risks, bugs, and maintainability issues.</p>
+          </div>
+          <form id="auth-form" class="form-card">
+            <h3 id="auth-title">Create your workspace</h3>
+            <label>Email<input id="auth-email" type="email" required placeholder="you@example.com" /></label>
+            <label>Password<input id="auth-password" type="password" minlength="8" required placeholder="At least 8 characters" /></label>
+            <button class="primary-button" type="submit">Continue</button>
+            <button id="auth-toggle" class="text-button" type="button">Already have an account? Sign in</button>
+            <div id="auth-error" class="error-text"></div>
+          </form>
+        </section>
+
+        <section id="workspace" class="workspace hidden">
+          <div class="workspace-grid">
+            <section class="panel project-panel">
+              <div class="section-heading"><div><span class="eyebrow">Project</span><h2 id="project-name">Select a project</h2></div><span id="project-count" class="count-badge">0 files</span></div>
+              <form id="file-form" class="file-form">
+                <label>File path<input id="file-path" required placeholder="src/auth.py" /></label>
+                <label>Source content<textarea id="file-content" required placeholder="Paste a file to review..."></textarea></label>
+                <button class="secondary-button" type="submit">Add file</button>
+              </form>
+              <div id="file-list" class="file-list"><div class="empty-state">Create or select a project to begin.</div></div>
+            </section>
+
+            <section class="panel review-panel">
+              <div class="section-heading"><div><span class="eyebrow">AI review</span><h2>Review signal</h2></div><span id="review-status" class="status-badge">Ready</span></div>
+              <p class="muted">Forge reads the files in your selected project and streams the analysis back as it works.</p>
+              <button id="run-review" class="primary-button review-button" type="button" disabled>Run local review <span>↗</span></button>
+              <div id="stream-output" class="stream-output"><div class="empty-state">Your review narrative will appear here.</div></div>
+              <div id="findings" class="findings"></div>
+            </section>
+          </div>
+        </section>
+        <div id="toast" class="toast"></div>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>

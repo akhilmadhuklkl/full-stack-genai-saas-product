@@ -1,8 +1,10 @@
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
@@ -647,3 +649,6 @@ def stream_review(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "web", html=True), name="web")
