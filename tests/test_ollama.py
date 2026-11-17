@@ -3,6 +3,7 @@ import json
 import httpx
 
 from app.ai.ollama import OllamaReviewService
+from app.ai.prompts import build_code_review_prompt
 
 
 def test_ollama_result_parser() -> None:
@@ -58,3 +59,9 @@ def test_ollama_result_parser_is_exposed_for_streaming() -> None:
 
     assert result.summary == "Clean"
     assert result.findings == []
+
+
+def test_prompt_version_is_explicit() -> None:
+    prompt = build_code_review_prompt("demo", [("app.py", "print(1)")], "v1")
+
+    assert "Review project 'demo'" in prompt

@@ -139,7 +139,7 @@ def create_review(
         else:
             existing_file.content = submitted_file.content
 
-    review = Review(project=project, status="queued")
+    review = Review(project=project, status="queued", prompt_version=settings.prompt_version)
     database.add(review)
     database.add(UsageRecord(user=current_user, usage_type="review", units=1))
     database.commit()
@@ -647,6 +647,7 @@ def list_reviews(
             project_id=review.project_id,
             status=review.status,
             summary=review.summary,
+            prompt_version=review.prompt_version,
         )
         for review in reviews
     ]
@@ -677,6 +678,7 @@ def get_review(
         project_id=review.project_id,
         status=review.status,
         summary=review.summary,
+        prompt_version=review.prompt_version,
         findings=[
             ReviewFindingResponse(
                 id=finding.id,
@@ -739,6 +741,7 @@ def update_review_status(
         project_id=review.project_id,
         status=review.status,
         summary=review.summary,
+        prompt_version=review.prompt_version,
     )
 
 
@@ -805,7 +808,7 @@ def run_review(
     files = [(project_file.path, project_file.content) for project_file in review.project.files]
 
     try:
-        result = review_service.review(review.project.name, files)
+        result = review_service.review(review.project.name, files, review.prompt_version)
         for finding in result.findings:
             review.findings.append(
                 ReviewFinding(
@@ -832,6 +835,7 @@ def run_review(
         project_id=review.project_id,
         status=review.status,
         summary=review.summary,
+        prompt_version=review.prompt_version,
         findings=[
             ReviewFindingResponse(
                 id=finding.id,
@@ -869,7 +873,9 @@ def stream_review(
                 (project_file.path, project_file.content)
                 for project_file in review.project.files
             ]
-            for chunk in review_service.stream_review(review.project.name, files):
+            for chunk in review_service.stream_review(
+                review.project.name, files, review.prompt_version
+            ):
                 content_parts.append(chunk)
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
 

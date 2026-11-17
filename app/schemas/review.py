@@ -54,6 +54,7 @@ class ReviewSummaryResponse(BaseModel):
     project_id: int
     status: Literal["queued", "processing", "completed", "failed"]
     summary: str | None
+    prompt_version: str
 
 
 class ReviewDetailResponse(ReviewSummaryResponse):

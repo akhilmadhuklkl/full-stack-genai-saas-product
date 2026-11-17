@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.ai.prompts import CURRENT_PROMPT_VERSION, build_code_review_prompt
 from app.config import settings
 
 
@@ -34,8 +35,13 @@ class OllamaReviewService:
         self.base_url = (base_url or settings.ollama_base_url).rstrip("/")
         self.model = model or settings.ollama_model
 
-    def review(self, project_name: str, files: list[tuple[str, str]]) -> ReviewResult:
-        prompt = self._build_prompt(project_name, files)
+    def review(
+        self,
+        project_name: str,
+        files: list[tuple[str, str]],
+        prompt_version: str = CURRENT_PROMPT_VERSION,
+    ) -> ReviewResult:
+        prompt = build_code_review_prompt(project_name, files, prompt_version)
         try:
             response = httpx.post(
                 f"{self.base_url}/api/chat",
@@ -58,9 +64,14 @@ class OllamaReviewService:
         except (TypeError, ValueError, json.JSONDecodeError) as error:
             raise AIReviewError("Ollama returned invalid review JSON") from error
 
-    def stream_review(self, project_name: str, files: list[tuple[str, str]]) -> Iterator[str]:
+    def stream_review(
+        self,
+        project_name: str,
+        files: list[tuple[str, str]],
+        prompt_version: str = CURRENT_PROMPT_VERSION,
+    ) -> Iterator[str]:
         """Yield model content fragments while Ollama generates a review."""
-        prompt = self._build_prompt(project_name, files)
+        prompt = build_code_review_prompt(project_name, files, prompt_version)
         try:
             with httpx.stream(
                 "POST",
@@ -89,33 +100,6 @@ class OllamaReviewService:
     def parse_result(self, content: str) -> ReviewResult:
         """Validate accumulated streamed model content."""
         return self._parse_result(content)
-
-    @staticmethod
-    def _build_prompt(project_name: str, files: list[tuple[str, str]]) -> str:
-        file_blocks = "\n\n".join(
-            f"FILE: {path}\n```\n{content}\n```" for path, content in files
-        )
-        return f"""You are a careful code reviewer. Review project '{project_name}'.
-
-Analyze the supplied source files for concrete bugs, security issues, performance problems,
-and maintainability concerns. Do not invent issues. Return JSON only in this exact shape:
-{{
-  "summary": "short overall summary",
-  "findings": [
-    {{
-      "severity": "low|medium|high|critical",
-      "file_path": "relative/path.py",
-      "line_number": 1,
-      "title": "short title",
-      "explanation": "why this is a problem",
-      "recommendation": "how to improve it"
-    }}
-  ]
-}}
-
-If there are no findings, return an empty findings array.
-
-{file_blocks}"""
 
     @staticmethod
     def _parse_result(content: str) -> ReviewResult:
