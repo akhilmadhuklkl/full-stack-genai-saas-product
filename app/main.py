@@ -1,6 +1,8 @@
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
@@ -589,4 +591,59 @@ def run_review(
             )
             for finding in review.findings
         ],
+    )
+
+
+@app.get("/api/v1/reviews/{review_id}/stream", tags=["reviews"])
+def stream_review(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    """Stream review progress and Ollama output as server-sent events."""
+    review = _get_owned_review(review_id, current_user, database)
+    if review.status != "queued":
+        raise HTTPException(status_code=409, detail="Only queued reviews can be streamed")
+
+    review.status = "processing"
+    database.commit()
+
+    def events():
+        yield f"data: {json.dumps({'type': 'status', 'status': 'processing'})}\n\n"
+        content_parts: list[str] = []
+        try:
+            files = [
+                (project_file.path, project_file.content)
+                for project_file in review.project.files
+            ]
+            for chunk in review_service.stream_review(review.project.name, files):
+                content_parts.append(chunk)
+                yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
+
+            result = review_service.parse_result("".join(content_parts))
+            for finding in result.findings:
+                review.findings.append(
+                    ReviewFinding(
+                        severity=finding.severity,
+                        file_path=finding.file_path,
+                        line_number=finding.line_number,
+                        title=finding.title,
+                        explanation=finding.explanation,
+                        recommendation=finding.recommendation,
+                    )
+                )
+            review.summary = result.summary
+            review.status = "completed"
+            database.commit()
+            yield f"data: {json.dumps({'type': 'status', 'status': 'completed'})}\n\n"
+        except AIReviewError:
+            review.status = "failed"
+            database.commit()
+            error_event = {"type": "error", "message": "The local AI reviewer failed"}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

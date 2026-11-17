@@ -1,5 +1,6 @@
 import json
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 import httpx
@@ -55,6 +56,38 @@ class OllamaReviewService:
             raise AIReviewError(f"Ollama request failed: {error}") from error
         except (TypeError, ValueError, json.JSONDecodeError) as error:
             raise AIReviewError("Ollama returned invalid review JSON") from error
+
+    def stream_review(self, project_name: str, files: list[tuple[str, str]]) -> Iterator[str]:
+        """Yield model content fragments while Ollama generates a review."""
+        prompt = self._build_prompt(project_name, files)
+        try:
+            with httpx.stream(
+                "POST",
+                f"{self.base_url}/api/chat",
+                json={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "format": "json",
+                    "stream": True,
+                },
+                timeout=120.0,
+            ) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if not line:
+                        continue
+                    payload = json.loads(line)
+                    content = payload.get("message", {}).get("content", "")
+                    if content:
+                        yield content
+        except httpx.HTTPError as error:
+            raise AIReviewError(f"Ollama streaming request failed: {error}") from error
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise AIReviewError("Ollama returned invalid streaming JSON") from error
+
+    def parse_result(self, content: str) -> ReviewResult:
+        """Validate accumulated streamed model content."""
+        return self._parse_result(content)
 
     @staticmethod
     def _build_prompt(project_name: str, files: list[tuple[str, str]]) -> str:

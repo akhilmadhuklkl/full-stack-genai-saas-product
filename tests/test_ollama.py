@@ -49,3 +49,12 @@ def test_ollama_service_builds_code_review_request(monkeypatch) -> None:
     assert captured["url"] == "http://ollama/api/chat"
     assert captured["payload"]["model"] == "test-model"
     assert "print('hello')" in captured["payload"]["messages"][0]["content"]
+
+
+def test_ollama_result_parser_is_exposed_for_streaming() -> None:
+    service = OllamaReviewService()
+
+    result = service.parse_result('{"summary":"Clean","findings":[]}')
+
+    assert result.summary == "Clean"
+    assert result.findings == []
