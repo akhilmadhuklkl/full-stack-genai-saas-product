@@ -47,7 +47,17 @@ async function selectProject(id) {
   $('run-review').disabled = state.files.length === 0;
   $('file-list').innerHTML = state.files.length ? state.files.map((file) => `<div class="file-row"><span>${file.path}</span><button data-file-id="${file.id}">remove</button></div>`).join('') : '<div class="empty-state">No files in this project yet.</div>';
   document.querySelectorAll('[data-file-id]').forEach((button) => { button.onclick = () => removeFile(Number(button.dataset.fileId)); });
+  await loadReviewHistory();
   await loadProjects();
+}
+
+async function loadReviewHistory() {
+  if (!state.selectedProject) return;
+  const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews`);
+  if (!response.ok) { $('review-history').innerHTML = '<div class="error-text">Could not load review history.</div>'; return; }
+  const reviews = await response.json();
+  $('review-history').innerHTML = reviews.length ? reviews.slice().reverse().map((review) => `<button data-review-id="${review.id}"><span>Review #${review.id}</span><small>${review.status}</small></button>`).join('') : '<div class="empty-state">No review runs yet.</div>';
+  document.querySelectorAll('[data-review-id]').forEach((button) => { button.onclick = () => showReview(Number(button.dataset.reviewId)); });
 }
 
 async function createProject() {
@@ -67,14 +77,15 @@ async function removeFile(id) {
 async function runReview() {
   if (!state.selectedProject || !state.files.length) return;
   $('run-review').disabled = true;
+  $('run-review').textContent = 'Review in progress…';
   $('review-status').textContent = 'Starting';
   $('stream-output').textContent = '';
   $('findings').innerHTML = '';
   const reviewResponse = await api('/api/v1/reviews', { method: 'POST', body: JSON.stringify({ project_name: state.selectedProject.name, files: state.files.map((file) => ({ path: file.path, content: file.content || '' })) }) });
-  if (!reviewResponse.ok) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; return toast('Could not create review'); }
+  if (!reviewResponse.ok) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; $('run-review').textContent = 'Run local review ↗'; return toast('Could not create review'); }
   const review = await reviewResponse.json();
   const streamResponse = await api(`/api/v1/reviews/${review.review_id}/stream`);
-  if (!streamResponse.ok || !streamResponse.body) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; return toast('Could not start stream'); }
+  if (!streamResponse.ok || !streamResponse.body) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; $('run-review').textContent = 'Run local review ↗'; return toast('Could not start stream'); }
   $('review-status').textContent = 'Reviewing';
   const reader = streamResponse.body.getReader();
   const decoder = new TextDecoder();
@@ -94,7 +105,9 @@ async function runReview() {
     });
   }
   if ($('review-status').textContent === 'completed') await showReview(review.review_id);
+  await loadReviewHistory();
   $('run-review').disabled = false;
+  $('run-review').textContent = 'Run local review ↗';
 }
 
 async function showReview(id) {

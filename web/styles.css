@@ -62,6 +62,13 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .file-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: #f7f9f5; border-radius: 8px; font-family: monospace; font-size: 12px; }
 .file-row button { border: 0; background: transparent; color: var(--danger); font-size: 11px; }
 .review-button { width: 100%; display: flex; justify-content: space-between; margin: 22px 0; }
+.compact { margin-bottom: 10px; }
+.compact h3 { margin: 5px 0 0; }
+.history-block { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.review-history { display: grid; gap: 8px; }
+.review-history button { display: flex; justify-content: space-between; align-items: center; text-align: left; border: 1px solid var(--line); background: #fbfcf9; border-radius: 8px; padding: 10px 12px; color: var(--ink); }
+.review-history button:hover { border-color: var(--accent-deep); background: #f4f8e7; }
+.review-history small { color: var(--muted); }
 .muted { color: var(--muted); line-height: 1.6; font-size: 14px; }
 .stream-output { min-height: 170px; max-height: 280px; overflow: auto; padding: 18px; background: #202c2d; color: #e3f2db; border-radius: 12px; font-family: monospace; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
 .empty-state { color: #9ba9a1; font-size: 13px; padding: 15px 0; }
