@@ -7,6 +7,7 @@ from app.db.models import Project, ProjectFile, Review, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.review import (
     ProjectFileResponse,
@@ -210,6 +211,136 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     database.delete(project)
+    database.commit()
+    return Response(status_code=204)
+
+
+def _get_owned_project(project_id: int, current_user: User, database: Session) -> Project:
+    project = (
+        database.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def _to_file_response(project_file: ProjectFile) -> FileResponse:
+    return FileResponse(
+        id=project_file.id,
+        project_id=project_file.project_id,
+        path=project_file.path,
+        content=project_file.content,
+    )
+
+
+@app.post(
+    "/api/v1/projects/{project_id}/files",
+    response_model=FileResponse,
+    status_code=201,
+    tags=["files"],
+)
+def create_file(
+    project_id: int,
+    request: FileCreateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    """Add one source file to an owned project."""
+    project = _get_owned_project(project_id, current_user, database)
+    path = request.path.strip()
+    if not path:
+        raise HTTPException(status_code=422, detail="File path cannot be blank")
+
+    existing_file = (
+        database.query(ProjectFile)
+        .filter(ProjectFile.project_id == project.id, ProjectFile.path == path)
+        .one_or_none()
+    )
+    if existing_file is not None:
+        raise HTTPException(status_code=409, detail="File path already exists")
+
+    project_file = ProjectFile(project=project, path=path, content=request.content)
+    database.add(project_file)
+    database.commit()
+    database.refresh(project_file)
+    return _to_file_response(project_file)
+
+
+@app.get(
+    "/api/v1/projects/{project_id}/files",
+    response_model=list[FileResponse],
+    tags=["files"],
+)
+def list_files(
+    project_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[FileResponse]:
+    """List files belonging to an owned project."""
+    project = _get_owned_project(project_id, current_user, database)
+    return [_to_file_response(project_file) for project_file in project.files]
+
+
+@app.get("/api/v1/files/{file_id}", response_model=FileResponse, tags=["files"])
+def get_file(
+    file_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    """Read one file only when its project belongs to the current user."""
+    project_file = (
+        database.query(ProjectFile)
+        .join(Project)
+        .filter(ProjectFile.id == file_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project_file is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    return _to_file_response(project_file)
+
+
+@app.put("/api/v1/files/{file_id}", response_model=FileResponse, tags=["files"])
+def update_file(
+    file_id: int,
+    request: FileUpdateRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    """Replace the content of an owned file."""
+    project_file = (
+        database.query(ProjectFile)
+        .join(Project)
+        .filter(ProjectFile.id == file_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project_file is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    project_file.content = request.content
+    database.commit()
+    database.refresh(project_file)
+    return _to_file_response(project_file)
+
+
+@app.delete("/api/v1/files/{file_id}", status_code=204, tags=["files"])
+def delete_file(
+    file_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Delete an owned source file."""
+    project_file = (
+        database.query(ProjectFile)
+        .join(Project)
+        .filter(ProjectFile.id == file_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if project_file is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    database.delete(project_file)
     database.commit()
     return Response(status_code=204)
 

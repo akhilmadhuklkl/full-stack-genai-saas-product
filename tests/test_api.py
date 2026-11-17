@@ -70,3 +70,12 @@ def test_project_creation_requires_authentication() -> None:
     response = client.post("/api/v1/projects", json={"name": "demo"})
 
     assert response.status_code == 401
+
+
+def test_file_creation_requires_authentication() -> None:
+    response = client.post(
+        "/api/v1/projects/1/files",
+        json={"path": "app.py", "content": "print('hello')"},
+    )
+
+    assert response.status_code == 401
