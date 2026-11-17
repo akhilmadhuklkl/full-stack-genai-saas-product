@@ -99,3 +99,9 @@ def test_validation_errors_use_safe_stable_shape(client) -> None:
     assert response.status_code == 422
     assert response.json()["error"] == "validation_error"
     assert "password" in response.json()["fields"]
+
+
+def test_usage_requires_authentication(client) -> None:
+    response = client.get("/api/v1/me/usage")
+
+    assert response.status_code == 401

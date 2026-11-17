@@ -66,9 +66,22 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_review_findings_review_id", "review_findings", ["review_id"], unique=False)
+    op.create_table(
+        "usage_records",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("usage_type", sa.String(length=50), nullable=False),
+        sa.Column("units", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("ix_usage_records_user_id", "usage_records", ["user_id"], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index("ix_usage_records_user_id", table_name="usage_records")
+    op.drop_table("usage_records")
     op.drop_index("ix_review_findings_review_id", table_name="review_findings")
     op.drop_table("review_findings")
     op.drop_index("ix_reviews_project_id", table_name="reviews")

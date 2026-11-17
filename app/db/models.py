@@ -15,6 +15,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     projects: Mapped[list["Project"]] = relationship(back_populates="owner")
+    usage_records: Mapped[list["UsageRecord"]] = relationship(back_populates="user")
 
 
 class Project(Base):
@@ -75,3 +76,15 @@ class ReviewFinding(Base):
     recommendation: Mapped[str] = mapped_column(Text)
 
     review: Mapped[Review] = relationship(back_populates="findings")
+
+
+class UsageRecord(Base):
+    __tablename__ = "usage_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    usage_type: Mapped[str] = mapped_column(String(50))
+    units: Mapped[int] = mapped_column(default=1)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    user: Mapped[User] = relationship(back_populates="usage_records")

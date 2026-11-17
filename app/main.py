@@ -1,6 +1,7 @@
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -11,9 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.config import settings
-from app.db.models import Project, ProjectFile, Review, ReviewFinding, User
+from app.db.models import Project, ProjectFile, Review, ReviewFinding, UsageRecord, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
+from app.limits import review_rate_limiter
 from app.observability import (
     RequestLoggingMiddleware,
     unhandled_error_handler,
@@ -32,6 +34,7 @@ from app.schemas.review import (
     ReviewSummaryResponse,
 )
 from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRequest
+from app.schemas.usage import UsageResponse
 from app.security import create_access_token, hash_password, verify_password
 
 review_service = OllamaReviewService()
@@ -100,6 +103,7 @@ def create_review(
 
     The authenticated user owns the project and its review data.
     """
+    review_rate_limiter.check_and_record(current_user.id)
     project = (
         database.query(Project)
         .filter(Project.owner_id == current_user.id, Project.name == request.project_name)
@@ -125,6 +129,7 @@ def create_review(
 
     review = Review(project=project, status="queued")
     database.add(review)
+    database.add(UsageRecord(user=current_user, usage_type="review", units=1))
     database.commit()
     database.refresh(review)
 
@@ -132,6 +137,30 @@ def create_review(
         review_id=str(review.id),
         status="queued",
         message=f"Review accepted for {len(request.files)} file(s).",
+    )
+
+
+@app.get("/api/v1/me/usage", response_model=UsageResponse, tags=["usage"])
+def get_usage(
+    database: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+) -> UsageResponse:
+    """Return the authenticated user's review usage for the current hour."""
+    period_end = datetime.utcnow()
+    period_start = period_end - timedelta(hours=1)
+    review_count = (
+        database.query(UsageRecord)
+        .filter(
+            UsageRecord.user_id == current_user.id,
+            UsageRecord.usage_type == "review",
+            UsageRecord.created_at >= period_start,
+        )
+        .count()
+    )
+    return UsageResponse(
+        review_count=review_count,
+        period_start=period_start,
+        period_end=period_end,
+        limit=review_rate_limiter.max_requests,
     )
 
 
