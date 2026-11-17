@@ -120,3 +120,9 @@ def test_archive_upload_requires_authentication(client) -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_project_stats_requires_authentication(client) -> None:
+    response = client.get("/api/v1/projects/1/stats")
+
+    assert response.status_code == 401

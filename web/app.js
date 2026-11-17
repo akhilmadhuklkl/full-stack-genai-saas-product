@@ -54,7 +54,17 @@ async function selectProject(id) {
   $('file-list').innerHTML = state.files.length ? state.files.map((file) => `<div class="file-row"><span>${file.path}</span><button data-file-id="${file.id}">remove</button></div>`).join('') : '<div class="empty-state">No files in this project yet.</div>';
   document.querySelectorAll('[data-file-id]').forEach((button) => { button.onclick = () => removeFile(Number(button.dataset.fileId)); });
   await loadReviewHistory();
+  await loadStats();
   await loadProjects();
+}
+
+async function loadStats() {
+  if (!state.selectedProject) return;
+  const response = await api(`/api/v1/projects/${state.selectedProject.id}/stats`);
+  if (!response.ok) return;
+  const stats = await response.json();
+  const findingTotal = stats.findings.low + stats.findings.medium + stats.findings.high + stats.findings.critical;
+  $('stats-grid').innerHTML = `<div class="stat-card"><span>Files</span><strong>${stats.file_count}</strong></div><div class="stat-card"><span>Reviews</span><strong>${stats.reviews.total}</strong></div><div class="stat-card"><span>Findings</span><strong>${findingTotal}</strong></div>`;
 }
 
 async function loadReviewHistory() {
@@ -97,6 +107,7 @@ async function runReview() {
   $('stream-output').textContent = 'The review is running in the background…';
   await pollJob(job.id, review.review_id);
   await loadReviewHistory();
+  await loadStats();
   $('run-review').disabled = false;
   $('run-review').textContent = 'Run local review ↗';
 }

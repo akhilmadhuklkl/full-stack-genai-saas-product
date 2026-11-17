@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile,
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
@@ -40,6 +41,7 @@ from app.schemas.review import (
     ReviewSummaryResponse,
 )
 from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRequest
+from app.schemas.stats import FindingStatsResponse, ProjectStatsResponse, ReviewStatsResponse
 from app.schemas.usage import UsageResponse
 from app.security import create_access_token, hash_password, verify_password
 
@@ -563,6 +565,51 @@ def get_project(
         id=project.id,
         name=project.name,
         files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
+    )
+
+
+@app.get(
+    "/api/v1/projects/{project_id}/stats",
+    response_model=ProjectStatsResponse,
+    tags=["projects"],
+)
+def get_project_stats(
+    project_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectStatsResponse:
+    """Return review and finding counts for an owned project."""
+    project = _get_owned_project(project_id, current_user, database)
+    review_counts = {
+        status_name: count
+        for status_name, count in database.query(Review.status, func.count(Review.id))
+        .filter(Review.project_id == project.id)
+        .group_by(Review.status)
+        .all()
+    }
+    severity_counts = {
+        severity: count
+        for severity, count in database.query(ReviewFinding.severity, func.count(ReviewFinding.id))
+        .join(Review)
+        .filter(Review.project_id == project.id)
+        .group_by(ReviewFinding.severity)
+        .all()
+    }
+    return ProjectStatsResponse(
+        project_id=project.id,
+        file_count=len(project.files),
+        reviews=ReviewStatsResponse(
+            total=sum(review_counts.values()),
+            completed=review_counts.get("completed", 0),
+            queued=review_counts.get("queued", 0) + review_counts.get("processing", 0),
+            failed=review_counts.get("failed", 0),
+        ),
+        findings=FindingStatsResponse(
+            low=severity_counts.get("low", 0),
+            medium=severity_counts.get("medium", 0),
+            high=severity_counts.get("high", 0),
+            critical=severity_counts.get("critical", 0),
+        ),
     )
 
 

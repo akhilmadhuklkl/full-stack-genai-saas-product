@@ -77,6 +77,10 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .stream-output { min-height: 170px; max-height: 280px; overflow: auto; padding: 18px; background: #202c2d; color: #e3f2db; border-radius: 12px; font-family: monospace; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
 .empty-state { color: #9ba9a1; font-size: 13px; padding: 15px 0; }
 .findings { display: grid; gap: 10px; margin-top: 16px; }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
+.stat-card { background: #f7f9f5; border-radius: 9px; padding: 12px; }
+.stat-card span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.stat-card strong { display: block; font-size: 22px; margin-top: 6px; }
 .finding { padding: 15px; border-left: 4px solid var(--accent-deep); background: #f8faf6; border-radius: 8px; }
 .finding.high, .finding.critical { border-color: var(--danger); }
 .finding-title { font-weight: 800; font-size: 13px; }
