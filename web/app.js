@@ -84,30 +84,30 @@ async function runReview() {
   const reviewResponse = await api('/api/v1/reviews', { method: 'POST', body: JSON.stringify({ project_name: state.selectedProject.name, files: state.files.map((file) => ({ path: file.path, content: file.content || '' })) }) });
   if (!reviewResponse.ok) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; $('run-review').textContent = 'Run local review ↗'; return toast('Could not create review'); }
   const review = await reviewResponse.json();
-  const streamResponse = await api(`/api/v1/reviews/${review.review_id}/stream`);
-  if (!streamResponse.ok || !streamResponse.body) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; $('run-review').textContent = 'Run local review ↗'; return toast('Could not start stream'); }
-  $('review-status').textContent = 'Reviewing';
-  const reader = streamResponse.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split('\n\n'); buffer = events.pop();
-    events.forEach((event) => {
-      const line = event.split('\n').find((item) => item.startsWith('data: '));
-      if (!line) return;
-      const payload = JSON.parse(line.slice(6));
-      if (payload.type === 'chunk') $('stream-output').textContent += payload.content;
-      if (payload.type === 'status') $('review-status').textContent = payload.status;
-      if (payload.type === 'error') { $('review-status').textContent = 'Failed'; toast(payload.message); }
-    });
-  }
-  if ($('review-status').textContent === 'completed') await showReview(review.review_id);
+  const enqueueResponse = await api(`/api/v1/reviews/${review.review_id}/enqueue`, { method: 'POST' });
+  if (!enqueueResponse.ok) { $('review-status').textContent = 'Error'; $('run-review').disabled = false; $('run-review').textContent = 'Run local review ↗'; return toast('Could not enqueue review'); }
+  const job = await enqueueResponse.json();
+  $('review-status').textContent = 'Queued';
+  $('stream-output').textContent = 'The review is running in the background…';
+  await pollJob(job.id, review.review_id);
   await loadReviewHistory();
   $('run-review').disabled = false;
   $('run-review').textContent = 'Run local review ↗';
+}
+
+async function pollJob(jobId, reviewId) {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    const response = await api(`/api/v1/jobs/${jobId}`);
+    if (!response.ok) { $('review-status').textContent = 'Error'; return toast('Could not read job status'); }
+    const job = await response.json();
+    $('review-status').textContent = job.status;
+    if (job.status === 'processing') $('stream-output').textContent = 'Ollama is analyzing your project…';
+    if (job.status === 'completed') { $('stream-output').textContent = 'Review completed. Findings are ready below.'; await showReview(reviewId); return; }
+    if (job.status === 'failed') { $('stream-output').textContent = 'The background review failed.'; return toast(job.error_message || 'Review failed'); }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  $('review-status').textContent = 'Timeout';
+  toast('Review is taking longer than expected. Check history shortly.');
 }
 
 async function showReview(id) {
