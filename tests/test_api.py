@@ -22,11 +22,10 @@ def test_create_review_returns_queued_review() -> None:
     )
 
     assert response.status_code == 202
-    assert response.json() == {
-        "review_id": "review-local-placeholder",
-        "status": "queued",
-        "message": "Review accepted for 1 file(s).",
-    }
+    body = response.json()
+    assert body["review_id"].isdigit()
+    assert body["status"] == "queued"
+    assert body["message"] == "Review accepted for 1 file(s)."
 
 
 def test_create_review_rejects_empty_file_list() -> None:
