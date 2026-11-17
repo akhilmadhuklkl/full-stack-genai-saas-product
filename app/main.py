@@ -1,10 +1,12 @@
 import json
 import logging
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from pathlib import Path
+from io import BytesIO
+from pathlib import Path, PurePosixPath
 
-from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,6 +25,7 @@ from app.observability import (
     unhandled_error_handler,
     validation_error_handler,
 )
+from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
 from app.schemas.job import JobResponse
@@ -395,6 +398,72 @@ def create_file(
     database.refresh(project_file)
     cache.delete(project_cache_key(current_user.id))
     return _to_file_response(project_file)
+
+
+@app.post(
+    "/api/v1/projects/{project_id}/archive",
+    response_model=ArchiveUploadResponse,
+    status_code=201,
+    tags=["files"],
+)
+async def upload_archive(
+    project_id: int,
+    archive: UploadFile = File(...),
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ArchiveUploadResponse:
+    """Import safe UTF-8 source files from a ZIP archive."""
+    project = _get_owned_project(project_id, current_user, database)
+    archive_bytes = await archive.read()
+    if len(archive_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Archive is larger than 5 MB")
+
+    imported_files = 0
+    skipped_files = 0
+    try:
+        zip_file = zipfile.ZipFile(BytesIO(archive_bytes))
+    except zipfile.BadZipFile as error:
+        raise HTTPException(
+            status_code=400, detail="Uploaded file is not a valid ZIP archive"
+        ) from error
+
+    members = [member for member in zip_file.infolist() if not member.is_dir()]
+    if len(members) > 100:
+        raise HTTPException(status_code=413, detail="Archive contains more than 100 files")
+
+    for member in members:
+        path = PurePosixPath(member.filename)
+        if path.is_absolute() or ".." in path.parts:
+            skipped_files += 1
+            continue
+        try:
+            content = zip_file.read(member).decode("utf-8")
+        except (UnicodeDecodeError, ValueError, zipfile.BadZipFile):
+            skipped_files += 1
+            continue
+        if not content or len(content) > 100_000:
+            skipped_files += 1
+            continue
+
+        path_string = path.as_posix()
+        existing_file = (
+            database.query(ProjectFile)
+            .filter(ProjectFile.project_id == project.id, ProjectFile.path == path_string)
+            .one_or_none()
+        )
+        if existing_file is None:
+            project.files.append(ProjectFile(path=path_string, content=content))
+        else:
+            existing_file.content = content
+        imported_files += 1
+
+    database.commit()
+    cache.delete(project_cache_key(current_user.id))
+    return ArchiveUploadResponse(
+        project_id=project.id,
+        imported_files=imported_files,
+        skipped_files=skipped_files,
+    )
 
 
 @app.get(
