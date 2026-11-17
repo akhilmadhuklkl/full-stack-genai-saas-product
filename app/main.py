@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.models import Project, ProjectFile, Review, User
 from app.db.session import create_tables, get_db
+from app.dependencies import get_current_user
+from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.review import (
     ProjectFileResponse,
     ProjectResponse,
@@ -14,6 +16,7 @@ from app.schemas.review import (
     ReviewResponse,
     ReviewSummaryResponse,
 )
+from app.security import create_access_token, hash_password, verify_password
 
 
 @asynccontextmanager
@@ -36,26 +39,51 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/api/v1/auth/register", response_model=AuthResponse, status_code=201, tags=["auth"])
+def register(request: RegisterRequest, database: Session = Depends(get_db)) -> AuthResponse:
+    """Create a user account and return its access token."""
+    email = request.email.strip().lower()
+    if database.query(User).filter(User.email == email).one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Email is already registered")
+
+    user = User(email=email, password_hash=hash_password(request.password))
+    database.add(user)
+    database.commit()
+    database.refresh(user)
+    return AuthResponse(access_token=create_access_token(user.id), user_id=user.id)
+
+
+@app.post("/api/v1/auth/login", response_model=AuthResponse, tags=["auth"])
+def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthResponse:
+    """Authenticate a user and return its access token."""
+    email = request.email.strip().lower()
+    user = database.query(User).filter(User.email == email).one_or_none()
+    if user is None or not verify_password(request.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return AuthResponse(access_token=create_access_token(user.id), user_id=user.id)
+
+
 @app.post("/api/v1/reviews", response_model=ReviewResponse, status_code=202, tags=["reviews"])
-def create_review(request: ReviewRequest, database: Session = Depends(get_db)) -> ReviewResponse:
+def create_review(
+    request: ReviewRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewResponse:
     """Persist a review request and return its initial processing state.
 
-    Authentication is intentionally deferred. Until it is implemented, every local
-    request belongs to one clearly named development user.
+    The authenticated user owns the project and its review data.
     """
-    user = database.query(User).filter(User.email == "local-dev@example.com").one_or_none()
-    if user is None:
-        user = User(email="local-dev@example.com")
-        database.add(user)
-        database.flush()
-
     project = (
         database.query(Project)
-        .filter(Project.owner_id == user.id, Project.name == request.project_name)
+        .filter(Project.owner_id == current_user.id, Project.name == request.project_name)
         .one_or_none()
     )
     if project is None:
-        project = Project(owner=user, name=request.project_name)
+        project = Project(owner=current_user, name=request.project_name)
         database.add(project)
         database.flush()
 
@@ -85,26 +113,32 @@ def create_review(request: ReviewRequest, database: Session = Depends(get_db)) -
 
 
 @app.get("/api/v1/projects", response_model=list[ProjectResponse], tags=["projects"])
-def list_projects(database: Session = Depends(get_db)) -> list[ProjectResponse]:
-    """List projects belonging to the local development user."""
-    user = database.query(User).filter(User.email == "local-dev@example.com").one_or_none()
-    if user is None:
-        return []
-
+def list_projects(
+    database: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+) -> list[ProjectResponse]:
+    """List projects belonging to the authenticated user."""
     return [
         ProjectResponse(
             id=project.id,
             name=project.name,
             files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
         )
-        for project in user.projects
+        for project in current_user.projects
     ]
 
 
 @app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse, tags=["projects"])
-def get_project(project_id: int, database: Session = Depends(get_db)) -> ProjectResponse:
+def get_project(
+    project_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectResponse:
     """Return one project and its file paths."""
-    project = database.query(Project).filter(Project.id == project_id).one_or_none()
+    project = (
+        database.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -121,10 +155,16 @@ def get_project(project_id: int, database: Session = Depends(get_db)) -> Project
     tags=["reviews"],
 )
 def list_reviews(
-    project_id: int, database: Session = Depends(get_db)
+    project_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[ReviewSummaryResponse]:
     """List review runs for one project."""
-    project = database.query(Project).filter(Project.id == project_id).one_or_none()
+    project = (
+        database.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -140,9 +180,18 @@ def list_reviews(
 
 
 @app.get("/api/v1/reviews/{review_id}", response_model=ReviewDetailResponse, tags=["reviews"])
-def get_review(review_id: int, database: Session = Depends(get_db)) -> ReviewDetailResponse:
+def get_review(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewDetailResponse:
     """Return one review and its structured findings."""
-    review = database.query(Review).filter(Review.id == review_id).one_or_none()
+    review = (
+        database.query(Review)
+        .join(Project)
+        .filter(Review.id == review_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
 

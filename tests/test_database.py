@@ -19,7 +19,7 @@ def test_review_relationships_store_project_context_and_findings() -> None:
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
-        user = User(email="engineer@example.com")
+        user = User(email="engineer@example.com", password_hash="test-hash")
         project = Project(name="demo-review", owner=user)
         project.files.append(ProjectFile(path="app.py", content="print('hello')"))
         review = Review(status="completed", project=project, summary="One finding")

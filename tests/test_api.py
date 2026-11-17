@@ -13,8 +13,13 @@ def test_health_check() -> None:
 
 
 def test_create_review_returns_queued_review() -> None:
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "test@example.com", "password": "password-123"},
+    )
     response = client.post(
         "/api/v1/reviews",
+        headers={"Authorization": f"Bearer {auth.json()['access_token']}"},
         json={
             "project_name": "demo-project",
             "files": [{"path": "app.py", "content": "print('hello')"}],
@@ -29,8 +34,13 @@ def test_create_review_returns_queued_review() -> None:
 
 
 def test_create_review_rejects_empty_file_list() -> None:
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "empty@example.com", "password": "password-123"},
+    )
     response = client.post(
         "/api/v1/reviews",
+        headers={"Authorization": f"Bearer {auth.json()['access_token']}"},
         json={"project_name": "demo-project", "files": []},
     )
 
@@ -38,6 +48,19 @@ def test_create_review_rejects_empty_file_list() -> None:
 
 
 def test_missing_project_returns_not_found() -> None:
-    response = client.get("/api/v1/projects/999999")
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "missing@example.com", "password": "password-123"},
+    )
+    response = client.get(
+        "/api/v1/projects/999999",
+        headers={"Authorization": f"Bearer {auth.json()['access_token']}"},
+    )
 
     assert response.status_code == 404
+
+
+def test_projects_require_authentication() -> None:
+    response = client.get("/api/v1/projects")
+
+    assert response.status_code == 401
