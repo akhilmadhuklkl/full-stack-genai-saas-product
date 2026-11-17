@@ -33,6 +33,9 @@ uvicorn app.main:app --reload
 
 Open http://127.0.0.1:8000/docs for the interactive API documentation.
 
+The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
+to a PostgreSQL connection string when using PostgreSQL.
+
 Run tests with:
 
 ```powershell
