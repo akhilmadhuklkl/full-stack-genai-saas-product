@@ -88,3 +88,14 @@ def test_review_status_update_requires_authentication() -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_validation_errors_use_safe_stable_shape(client) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "not-an-email", "password": "short"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"] == "validation_error"
+    assert "password" in response.json()["fields"]

@@ -1,8 +1,10 @@
 import json
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -12,6 +14,11 @@ from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
+from app.observability import (
+    RequestLoggingMiddleware,
+    unhandled_error_handler,
+    validation_error_handler,
+)
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
@@ -43,6 +50,10 @@ app = FastAPI(
     description="Backend foundation for the AI-powered code review SaaS product.",
     lifespan=lifespan,
 )
+app.add_middleware(RequestLoggingMiddleware)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(Exception, unhandled_error_handler)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
 @app.get("/health", tags=["system"])
