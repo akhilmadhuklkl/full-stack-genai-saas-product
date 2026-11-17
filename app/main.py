@@ -1,5 +1,4 @@
 import json
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -9,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
+from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, User
 from app.db.session import create_tables, get_db
 from app.dependencies import get_current_user
@@ -32,7 +32,7 @@ review_service = OllamaReviewService()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if os.getenv("APP_ENV", "development") != "test":
+    if settings.app_env != "test":
         create_tables()
     yield
 

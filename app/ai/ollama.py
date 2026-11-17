@@ -1,9 +1,10 @@
 import json
-import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 
 import httpx
+
+from app.config import settings
 
 
 class AIReviewError(RuntimeError):
@@ -30,8 +31,8 @@ class OllamaReviewService:
     """Run code reviews against a locally hosted Ollama model."""
 
     def __init__(self, base_url: str | None = None, model: str | None = None):
-        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.model = model or os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+        self.base_url = (base_url or settings.ollama_base_url).rstrip("/")
+        self.model = model or settings.ollama_model
 
     def review(self, project_name: str, files: list[tuple[str, str]]) -> ReviewResult:
         prompt = self._build_prompt(project_name, files)

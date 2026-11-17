@@ -36,6 +36,14 @@ Open http://127.0.0.1:8000/docs for the interactive API documentation.
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.
 
+Configuration is loaded from environment variables. Use the example files as a guide:
+
+- `.env.development.example` for local development
+- `.env.test.example` for automated tests
+- `.env.production.example` as a deployment reference
+
+Never commit real passwords, API keys, database credentials, or production secrets.
+
 Apply database migrations with:
 
 ```powershell

@@ -1,8 +1,9 @@
 import base64
 import hashlib
 import hmac
-import os
 import secrets
+
+from app.config import settings
 
 PASSWORD_ITERATIONS = 600_000
 TOKEN_SEPARATOR = "."
@@ -32,7 +33,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 def create_access_token(user_id: int) -> str:
     """Create a signed, compact access token for local development."""
-    secret = os.getenv("AUTH_SECRET", "local-development-secret").encode()
+    secret = settings.auth_secret.encode()
     payload = str(user_id).encode()
     encoded_payload = base64.urlsafe_b64encode(payload).decode().rstrip("=")
     signature = hmac.new(secret, encoded_payload.encode(), hashlib.sha256).hexdigest()
@@ -43,7 +44,7 @@ def get_user_id_from_token(token: str) -> int | None:
     """Validate a token signature and return its user ID."""
     try:
         encoded_payload, signature = token.split(TOKEN_SEPARATOR, maxsplit=1)
-        secret = os.getenv("AUTH_SECRET", "local-development-secret").encode()
+        secret = settings.auth_secret.encode()
         expected_signature = hmac.new(
             secret, encoded_payload.encode(), hashlib.sha256
         ).hexdigest()
