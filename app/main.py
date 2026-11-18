@@ -723,10 +723,14 @@ def get_project_stats(
     tags=["reviews"],
 )
 def list_reviews(
+    response: Response,
     project_id: int,
     database: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     review_status: str | None = Query(default=None, alias="status"),
+    search: str | None = Query(default=None, max_length=100),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=50),
 ) -> list[ReviewSummaryResponse]:
     """List review runs for one project."""
     project = (
@@ -737,9 +741,19 @@ def list_reviews(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    reviews = project.reviews
+    query = database.query(Review).filter(Review.project_id == project.id)
     if review_status:
-        reviews = [review for review in reviews if review.status == review_status]
+        query = query.filter(Review.status == review_status)
+    if search:
+        query = query.filter(Review.summary.ilike(f"%{search.strip()}%"))
+    total = query.count()
+    reviews = (
+        query.order_by(Review.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    response.headers["X-Total-Count"] = str(total)
     jobs = {
         job.review_id: job
         for job in database.query(ReviewJob)

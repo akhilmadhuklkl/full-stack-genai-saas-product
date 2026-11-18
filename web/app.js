@@ -1,4 +1,4 @@
-const state = { token: localStorage.getItem('forge_token'), projects: [], selectedProject: null, files: [], currentReviewId: null };
+const state = { token: localStorage.getItem('forge_token'), projects: [], selectedProject: null, files: [], currentReviewId: null, reviewPage: 1, reviewTotal: 0 };
 const $ = (id) => document.getElementById(id);
 
 function api(path, options = {}) {
@@ -97,9 +97,17 @@ async function loadStats() {
 async function loadReviewHistory() {
   if (!state.selectedProject) return;
   const filter = $('review-status-filter').value;
-  const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews${filter ? `?status=${encodeURIComponent(filter)}` : ''}`);
+  const search = $('review-search').value.trim();
+  const params = new URLSearchParams({ page: state.reviewPage, page_size: 8 });
+  if (filter) params.set('status', filter);
+  if (search) params.set('search', search);
+  const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews?${params}`);
   if (!response.ok) { $('review-history').innerHTML = '<div class="error-text">Could not load review history.</div>'; return; }
   const reviews = await response.json();
+  state.reviewTotal = Number(response.headers.get('X-Total-Count') || reviews.length);
+  $('history-page').textContent = `Page ${state.reviewPage}`;
+  $('history-previous').disabled = state.reviewPage <= 1;
+  $('history-next').disabled = state.reviewPage * 8 >= state.reviewTotal;
   $('review-history').innerHTML = reviews.length ? reviews.slice().reverse().map((review) => {
     const status = review.job_status || review.status;
     const attempt = review.attempt_count ? ` · attempt ${review.attempt_count}` : '';
@@ -242,6 +250,9 @@ $('settings-form').onsubmit = async (event) => { event.preventDefault(); if (!st
 $('delete-project').onclick = async () => { if (!state.selectedProject || !confirm(`Delete ${state.selectedProject.name}?`)) return; const response = await api(`/api/v1/projects/${state.selectedProject.id}`, { method: 'DELETE' }); if (!response.ok) return toast('Could not delete project'); state.selectedProject = null; await loadProjects(); $('page-title').textContent = 'Welcome to Forge Review'; $('project-name').textContent = 'Select a project'; $('file-list').innerHTML = '<div class="empty-state">Create or select a project to begin.</div>'; toast('Project deleted'); };
 $('file-search').oninput = renderFiles;
 $('review-status-filter').onchange = loadReviewHistory;
+$('review-search').oninput = () => { state.reviewPage = 1; loadReviewHistory(); };
+$('history-previous').onclick = () => { if (state.reviewPage > 1) { state.reviewPage -= 1; loadReviewHistory(); } };
+$('history-next').onclick = () => { if (state.reviewPage * 8 < state.reviewTotal) { state.reviewPage += 1; loadReviewHistory(); } };
 $('severity-filter').onchange = () => { if (state.currentReviewId) showReview(state.currentReviewId); };
 
 renderAuth();

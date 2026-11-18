@@ -87,6 +87,9 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .retry-button { border: 1px solid #f0c3c3; border-radius: 8px; background: #fff7f7; color: var(--danger); padding: 0 11px; font-size: 11px; font-weight: 800; }
 .retry-button:hover { background: #fde4e4; }
 .review-history small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+.history-pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--muted); font-size: 11px; }
+.history-pagination button { margin-top: 0; }
+.history-pagination button:disabled { opacity: .35; cursor: not-allowed; }
 .history-status { font-size: 10px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .history-status.completed { color: var(--accent-deep); }
 .history-status.failed { color: var(--danger); }
