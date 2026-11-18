@@ -36,8 +36,9 @@ async function loadHealth() {
     const response = await fetch('/health/details');
     const health = await response.json();
     const ollama = health.components.ollama.status;
-    $('health-label').textContent = ollama === 'ok' ? 'Local AI online' : 'AI service unavailable';
-    $('health-dot').style.background = ollama === 'ok' ? 'var(--accent)' : '#e99a65';
+    const redis = health.components.redis.status;
+    $('health-label').textContent = ollama === 'ok' && redis === 'ok' ? 'AI + queue online' : 'System partially available';
+    $('health-dot').style.background = ollama === 'ok' && redis === 'ok' ? 'var(--accent)' : '#e99a65';
   } catch (error) {
     $('health-label').textContent = 'System status unavailable';
     $('health-dot').style.background = '#e99a65';
@@ -152,6 +153,7 @@ async function pollJob(jobId, reviewId) {
     if (!response.ok) { $('review-status').textContent = 'Error'; return toast('Could not read job status'); }
     const job = await response.json();
     $('review-status').textContent = job.status;
+    renderJobMeta(job);
     if (job.status === 'processing') $('stream-output').textContent = 'Ollama is analyzing your project…';
     if (job.status === 'completed') { $('stream-output').textContent = 'Review completed. Findings are ready below.'; await showReview(reviewId); return; }
     if (job.status === 'failed') { $('stream-output').textContent = 'The background review failed.'; return toast(job.error_message || 'Review failed'); }
@@ -159,6 +161,14 @@ async function pollJob(jobId, reviewId) {
   }
   $('review-status').textContent = 'Timeout';
   toast('Review is taking longer than expected. Check history shortly.');
+}
+
+function renderJobMeta(job) {
+  const meta = $('job-meta');
+  meta.classList.remove('hidden');
+  const started = job.started_at ? new Date(job.started_at).toLocaleTimeString() : 'not started';
+  const heartbeat = job.heartbeat_at ? new Date(job.heartbeat_at).toLocaleTimeString() : 'waiting';
+  meta.innerHTML = `<span>Attempt ${job.attempt_count}</span><span>Started ${escapeHtml(started)}</span><span>Heartbeat ${escapeHtml(heartbeat)}</span>`;
 }
 
 async function showReview(id) {
