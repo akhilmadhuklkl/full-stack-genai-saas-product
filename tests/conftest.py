@@ -1,6 +1,7 @@
 import os
 
 os.environ["APP_ENV"] = "test"
+os.environ["REDIS_URL"] = ""
 
 import pytest
 from fastapi.testclient import TestClient

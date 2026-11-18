@@ -27,4 +27,7 @@ if (-not ($models -match [regex]::Escape($model))) {
 
 Set-Location $projectRoot
 Write-Host "Starting Forge Review at http://127.0.0.1:$port" -ForegroundColor Cyan
-& $uvPath run --python 3.12 --with-editable ".[dev]" python -m uvicorn app.main:app --host 127.0.0.1 --port $port
+$workerLog = Join-Path $projectRoot "worker.log"
+$workerErrorLog = Join-Path $projectRoot "worker-error.log"
+Start-Process -FilePath $uvPath -ArgumentList 'run --python 3.12 --with-editable .[dev] python -m app.worker' -WorkingDirectory $projectRoot -WindowStyle Hidden -RedirectStandardOutput $workerLog -RedirectStandardError $workerErrorLog
+& $uvPath run --python 3.12 --with-editable ".[dev]" python -m uvicorn app.main:app --host 127.0.0.1 --port $port --env-file (Join-Path $projectRoot ".env")
