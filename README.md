@@ -142,3 +142,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
 ```
 
 The script starts Ollama when needed, downloads `llama3.2:3b` if it is missing, and starts Forge Review at `http://127.0.0.1:8001`.
+
+For local Redis infrastructure, use `docker compose -f docker-compose.local.yml up -d`.
+For a final local health check, run `powershell -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1`.
+
+See [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for the portfolio readiness checklist.
