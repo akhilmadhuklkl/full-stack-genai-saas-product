@@ -43,9 +43,10 @@ Python environment and confirm the GitHub Actions job is green.
 
 ### 2. Durable job processing
 
-The worker uses an in-process thread pool. A process restart can lose queued or active jobs.
-Before production, replace it with a durable queue and worker system such as Celery/RQ,
-Redis Queue, or a managed queue service.
+The project now supports a Redis-backed RQ queue and a separate worker process. Without
+`REDIS_URL`, it intentionally falls back to an in-process worker for local development.
+Production still needs worker deployment, queue monitoring, retry policy review, and recovery
+runbooks.
 
 ### 3. Authentication hardening
 

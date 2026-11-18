@@ -1,5 +1,4 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
@@ -7,14 +6,8 @@ from app.db.models import Review, ReviewFinding, ReviewJob
 from app.db.session import SessionLocal
 
 logger = logging.getLogger("forge_review.jobs")
-executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="review-worker")
-
-
-def enqueue_review(review_id: int, review_service: OllamaReviewService) -> None:
-    executor.submit(process_review, review_id, review_service)
-
-
-def process_review(review_id: int, review_service: OllamaReviewService) -> None:
+def process_review(review_id: int) -> None:
+    review_service = OllamaReviewService()
     database = SessionLocal()
     job = database.query(ReviewJob).filter(ReviewJob.review_id == review_id).one_or_none()
     review = database.get(Review, review_id)

@@ -46,6 +46,15 @@ ollama list
 ollama pull llama3.2:3b
 ```
 
+For durable background jobs, start Redis and a worker with:
+
+```powershell
+$env:REDIS_URL = "redis://127.0.0.1:6379/0"
+python -m app.worker
+```
+
+Without `REDIS_URL`, local development uses an in-process fallback worker.
+
 Prepare local configuration by copying `.env.development.example` to `.env` and
 adjusting values if needed. Never commit `.env`.
 

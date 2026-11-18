@@ -20,13 +20,13 @@ from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, ReviewJob, UsageRecord, User
 from app.db.session import create_tables, engine, get_db
 from app.dependencies import get_current_user
-from app.jobs import enqueue_review
 from app.limits import review_rate_limiter
 from app.observability import (
     RequestLoggingMiddleware,
     unhandled_error_handler,
     validation_error_handler,
 )
+from app.queue import enqueue_review
 from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
@@ -268,7 +268,7 @@ def enqueue_review_job(
     database.add(job)
     database.commit()
     database.refresh(job)
-    enqueue_review(review.id, review_service)
+    enqueue_review(review.id)
     return JobResponse(
         id=job.id,
         review_id=job.review_id,
