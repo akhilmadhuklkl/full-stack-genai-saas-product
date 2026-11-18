@@ -57,6 +57,7 @@ or login. API clients can continue using the bearer-token header.
 | POST | `/api/v1/reviews/{review_id}/enqueue` | Run asynchronously |
 | GET | `/api/v1/jobs/{job_id}` | Read background-job status |
 | POST | `/api/v1/reviews/{review_id}/retry` | Retry a failed review |
+| POST | `/api/v1/reviews/{review_id}/recover` | Requeue a stale processing review |
 | PATCH | `/api/v1/reviews/{review_id}/status` | Update review state |
 | POST | `/api/v1/reviews/{review_id}/findings` | Add a structured finding |
 

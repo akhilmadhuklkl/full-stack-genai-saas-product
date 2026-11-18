@@ -64,6 +64,8 @@ If `/health/details` reports stale heartbeats, inspect those jobs before retryin
 The current worker timeout and stale threshold are controlled by `OLLAMA_TIMEOUT_SECONDS`
 and `JOB_STALE_SECONDS`. A stale job should be retried after confirming that no worker is
 still processing it.
+Owners can recover an eligible stale review with `POST /api/v1/reviews/{review_id}/recover`.
+The endpoint refuses jobs whose heartbeat is still recent.
 
 Refresh tokens are single-use. A successful refresh revokes the supplied refresh token and
 returns a replacement pair. Reusing an older refresh token returns `401` and should be

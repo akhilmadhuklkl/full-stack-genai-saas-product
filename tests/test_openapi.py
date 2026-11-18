@@ -6,6 +6,7 @@ def test_openapi_contains_review_lifecycle_routes() -> None:
 
     assert "/api/v1/reviews/{review_id}/enqueue" in paths
     assert "/api/v1/reviews/{review_id}/retry" in paths
+    assert "/api/v1/reviews/{review_id}/recover" in paths
     assert "/api/v1/reviews/{review_id}/export" in paths
     assert "post" in paths["/api/v1/reviews/{review_id}/retry"]
 

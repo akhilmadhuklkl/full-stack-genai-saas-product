@@ -508,6 +508,45 @@ def retry_review(
     )
 
 
+@app.post("/api/v1/reviews/{review_id}/recover", response_model=JobResponse, tags=["jobs"])
+def recover_stale_review(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JobResponse:
+    """Requeue an owned review only when its worker heartbeat is stale."""
+    review = _get_owned_review(review_id, current_user, database)
+    job = database.query(ReviewJob).filter(ReviewJob.review_id == review.id).one_or_none()
+    stale_cutoff = datetime.utcnow() - timedelta(seconds=settings.job_stale_seconds)
+    if (
+        job is None
+        or review.status != "processing"
+        or job.status != "processing"
+        or job.heartbeat_at is None
+        or job.heartbeat_at >= stale_cutoff
+    ):
+        raise HTTPException(status_code=409, detail="Review does not have a stale processing job")
+
+    review.status = "queued"
+    job.status = "queued"
+    job.error_message = "Recovered after stale worker heartbeat"
+    job.completed_at = None
+    database.commit()
+    database.refresh(job)
+    enqueue_review(review.id)
+    return JobResponse(
+        id=job.id,
+        review_id=job.review_id,
+        status=job.status,
+        attempt_count=job.attempt_count,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        heartbeat_at=job.heartbeat_at,
+        completed_at=job.completed_at,
+    )
+
+
 @app.get("/api/v1/projects", response_model=list[ProjectResponse], tags=["projects"])
 def list_projects(
     database: Session = Depends(get_db), current_user: User = Depends(get_current_user)
