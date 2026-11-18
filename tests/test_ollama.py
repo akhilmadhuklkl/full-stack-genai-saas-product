@@ -39,6 +39,7 @@ def test_ollama_service_builds_code_review_request(monkeypatch) -> None:
         return httpx.Response(
             200,
             json={"message": {"content": '{"summary":"Clean","findings":[]}'}},
+            request=httpx.Request("POST", url),
         )
 
     monkeypatch.setattr("app.ai.ollama.httpx.post", fake_post)
@@ -59,6 +60,24 @@ def test_ollama_result_parser_is_exposed_for_streaming() -> None:
 
     assert result.summary == "Clean"
     assert result.findings == []
+
+
+def test_ollama_result_parser_rejects_unsafe_findings() -> None:
+    import pytest
+
+    with pytest.raises(Exception, match="unsafe file path"):
+        OllamaReviewService._parse_result(
+            '{"summary":"Bad","findings":[{"severity":"high","file_path":"../secret.py"}]}'
+        )
+
+
+def test_ollama_result_parser_rejects_unknown_severity() -> None:
+    import pytest
+
+    with pytest.raises(Exception, match="invalid severity"):
+        OllamaReviewService._parse_result(
+            '{"summary":"Bad","findings":[{"severity":"urgent","file_path":"app.py"}]}'
+        )
 
 
 def test_prompt_version_is_explicit() -> None:

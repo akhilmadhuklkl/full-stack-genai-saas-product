@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 
 import httpx
 
@@ -52,7 +53,7 @@ class OllamaReviewService:
                     "format": "json",
                     "stream": False,
                 },
-                timeout=120.0,
+                timeout=settings.ollama_timeout_seconds,
             )
             response.raise_for_status()
             payload = response.json()
@@ -84,7 +85,7 @@ class OllamaReviewService:
                     "format": "json",
                     "stream": True,
                 },
-                timeout=120.0,
+                timeout=settings.ollama_timeout_seconds,
             ) as response:
                 response.raise_for_status()
                 for line in response.iter_lines():
@@ -108,18 +109,30 @@ class OllamaReviewService:
         data = json.loads(content)
         summary = data.get("summary")
         findings = data.get("findings")
-        if not isinstance(summary, str) or not isinstance(findings, list):
+        if not isinstance(summary, str) or len(summary) > 50_000 or not isinstance(findings, list):
             raise AIReviewError("Review JSON must contain summary and findings")
+        if len(findings) > 100:
+            raise AIReviewError("Review JSON contains too many findings")
 
         parsed_findings: list[ReviewFindingResult] = []
         for finding in findings:
             if not isinstance(finding, dict):
                 raise AIReviewError("Each review finding must be an object")
+            severity = str(finding.get("severity", "medium")).lower()
+            if severity not in {"critical", "high", "medium", "low"}:
+                raise AIReviewError("Review finding has an invalid severity")
+            file_path = str(finding.get("file_path", "unknown"))
+            path = PurePosixPath(file_path)
+            if path.is_absolute() or ".." in path.parts:
+                raise AIReviewError("Review finding has an unsafe file path")
+            line_number = finding.get("line_number")
+            if line_number is not None and (not isinstance(line_number, int) or line_number < 1):
+                raise AIReviewError("Review finding has an invalid line number")
             parsed_findings.append(
                 ReviewFindingResult(
-                    severity=str(finding.get("severity", "medium")).lower(),
-                    file_path=str(finding.get("file_path", "unknown")),
-                    line_number=finding.get("line_number"),
+                    severity=severity,
+                    file_path=file_path,
+                    line_number=line_number,
                     title=str(finding.get("title", "Unspecified finding")),
                     explanation=str(finding.get("explanation", "")),
                     recommendation=str(finding.get("recommendation", "")),

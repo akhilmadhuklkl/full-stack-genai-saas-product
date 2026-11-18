@@ -15,6 +15,7 @@ class Settings:
     prompt_version: str
     auth_token_ttl_seconds: int
     auth_refresh_token_ttl_seconds: int
+    ollama_timeout_seconds: float
 
 
 def load_settings() -> Settings:
@@ -29,6 +30,7 @@ def load_settings() -> Settings:
         prompt_version=os.getenv("PROMPT_VERSION", "v1"),
         auth_token_ttl_seconds=int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "3600")),
         auth_refresh_token_ttl_seconds=int(os.getenv("AUTH_REFRESH_TOKEN_TTL_SECONDS", "2592000")),
+        ollama_timeout_seconds=float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120")),
     )
 
 
