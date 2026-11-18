@@ -98,6 +98,52 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/metrics", tags=["system"])
+def metrics() -> PlainTextResponse:
+    """Expose low-cardinality operational metrics for future monitoring."""
+    now = datetime.utcnow()
+    stale_cutoff = now - timedelta(seconds=settings.job_stale_seconds)
+    with SessionLocal() as database:
+        review_counts = dict(
+            database.query(Review.status, func.count(Review.id))
+            .group_by(Review.status)
+            .all()
+        )
+        queued_jobs = (
+            database.query(ReviewJob).filter(ReviewJob.status == "queued").count()
+        )
+        processing_jobs = (
+            database.query(ReviewJob).filter(ReviewJob.status == "processing").count()
+        )
+        stale_jobs = (
+            database.query(ReviewJob)
+            .filter(
+                ReviewJob.status == "processing",
+                ReviewJob.heartbeat_at < stale_cutoff,
+            )
+            .count()
+        )
+    queue_status, _ = get_queue_health()
+    lines = [
+        "# HELP forge_reviews_total Reviews grouped by lifecycle status.",
+        "# TYPE forge_reviews_total gauge",
+    ]
+    for status_name in ("queued", "processing", "completed", "failed"):
+        count = review_counts.get(status_name, 0)
+        lines.append(f'forge_reviews_total{{status="{status_name}"}} {count}')
+    lines.extend(
+        [
+            "# HELP forge_review_jobs Job queue and stale-job counts.",
+            "# TYPE forge_review_jobs gauge",
+            f'forge_review_jobs{{status="queued"}} {queued_jobs}',
+            f'forge_review_jobs{{status="processing"}} {processing_jobs}',
+            f'forge_review_jobs{{status="stale"}} {stale_jobs}',
+            f'forge_queue_available {1 if queue_status == "ok" else 0}',
+        ]
+    )
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
+
+
 @app.get("/api/v1/version", response_model=VersionResponse, tags=["system"])
 def version_info() -> VersionResponse:
     """Return application and active prompt versions."""

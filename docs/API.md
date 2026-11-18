@@ -66,6 +66,7 @@ or login. API clients can continue using the bearer-token header.
 |---|---|---|
 | GET | `/health` | Lightweight liveness check |
 | GET | `/health/details` | Database, Ollama, Redis, and worker status |
+| GET | `/metrics` | Prometheus-compatible operational metrics |
 
 ## Filtering
 
