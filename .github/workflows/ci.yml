@@ -18,6 +18,7 @@ jobs:
       AUTH_SECRET: ci-test-secret
       OLLAMA_BASE_URL: http://127.0.0.1:11434
       OLLAMA_MODEL: test-model
+      REDIS_URL: ""
 
     steps:
       - name: Check out repository
@@ -60,4 +61,12 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q --junitxml=test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: test-results.xml
+          if-no-files-found: warn

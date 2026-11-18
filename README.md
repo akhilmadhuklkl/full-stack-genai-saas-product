@@ -77,8 +77,9 @@ See [docs/API.md](docs/API.md) for the route overview.
 See [docs/MVP_REVIEW.md](docs/MVP_REVIEW.md) for the current readiness assessment and remaining gaps.
 
 GitHub Actions runs compilation, linting, migration setup, frontend syntax validation,
-tests, Bandit security scanning, dependency auditing, and secret-pattern checks on pushes
-and pull requests targeting `main`.
+tests with JUnit reporting, Bandit security scanning, dependency auditing, and
+secret-pattern checks on pushes and pull requests targeting `main`. Test results are
+uploaded as a workflow artifact when the CI job finishes.
 
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.
