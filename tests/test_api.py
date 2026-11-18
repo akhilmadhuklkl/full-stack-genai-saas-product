@@ -113,6 +113,84 @@ def test_job_status_requires_authentication(client) -> None:
     assert response.status_code == 401
 
 
+def test_enqueue_review_returns_job_metadata(client, monkeypatch) -> None:
+    monkeypatch.setattr("app.main.enqueue_review", lambda review_id: None)
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "queue@example.com", "password": "StrongPass123"},
+    )
+    headers = {"Authorization": f"Bearer {auth.json()['access_token']}"}
+    review = client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={
+            "project_name": "queue-project",
+            "files": [{"path": "app.py", "content": "print('hello')"}],
+        },
+    )
+
+    response = client.post(
+        f"/api/v1/reviews/{review.json()['review_id']}/enqueue",
+        headers=headers,
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "queued"
+    assert response.json()["attempt_count"] == 0
+    assert response.json()["started_at"] is None
+
+
+def test_enqueue_review_status_can_be_polled(client, monkeypatch) -> None:
+    monkeypatch.setattr("app.main.enqueue_review", lambda review_id: None)
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "poll@example.com", "password": "StrongPass123"},
+    )
+    headers = {"Authorization": f"Bearer {auth.json()['access_token']}"}
+    review = client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={
+            "project_name": "poll-project",
+            "files": [{"path": "app.py", "content": "print('hello')"}],
+        },
+    )
+    queued = client.post(
+        f"/api/v1/reviews/{review.json()['review_id']}/enqueue",
+        headers=headers,
+    ).json()
+
+    response = client.get(f"/api/v1/jobs/{queued['id']}", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["review_id"] == int(review.json()["review_id"])
+    assert response.json()["status"] == "queued"
+
+
+def test_retry_rejects_non_failed_review(client, monkeypatch) -> None:
+    monkeypatch.setattr("app.main.enqueue_review", lambda review_id: None)
+    auth = client.post(
+        "/api/v1/auth/register",
+        json={"email": "retry@example.com", "password": "StrongPass123"},
+    )
+    headers = {"Authorization": f"Bearer {auth.json()['access_token']}"}
+    review = client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={
+            "project_name": "retry-project",
+            "files": [{"path": "app.py", "content": "print('hello')"}],
+        },
+    )
+    review_id = review.json()["review_id"]
+    client.post(f"/api/v1/reviews/{review_id}/enqueue", headers=headers)
+
+    response = client.post(f"/api/v1/reviews/{review_id}/retry", headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Only failed reviews can be retried"
+
+
 def test_archive_upload_requires_authentication(client) -> None:
     response = client.post(
         "/api/v1/projects/1/archive",
