@@ -54,7 +54,7 @@ Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default), a
 tokens plus persistent access-token revocation and refresh-token rotation are implemented.
 Production authentication still needs secure browser storage,
 and email verification/reset flows. Login abuse throttling is implemented as a
-process-local safeguard; a distributed limiter should be used for multi-instance production.
+Redis-backed when `REDIS_URL` is configured, with a process-local fallback for development.
 
 ### 4. File storage and limits
 

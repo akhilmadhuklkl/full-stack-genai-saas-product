@@ -68,6 +68,9 @@ Refresh tokens are single-use. A successful refresh revokes the supplied refresh
 returns a replacement pair. Reusing an older refresh token returns `401` and should be
 treated as a possible token replay event.
 
+Login-attempt throttling uses Redis when `REDIS_URL` is configured, allowing counters to be
+shared across API instances. Without Redis, it falls back to a process-local limiter.
+
 ## Failed reviews
 
 A failed review stores an error message and can be retried from the review history panel.
