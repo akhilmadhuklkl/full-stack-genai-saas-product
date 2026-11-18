@@ -1,10 +1,8 @@
 import json
 import logging
-import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from io import BytesIO
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
@@ -16,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
+from app.archive import ArchiveSecurityError, extract_safe_text_files
 from app.cache import cache
 from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, ReviewJob, UsageRecord, User
@@ -500,53 +499,28 @@ async def upload_archive(
     """Import safe UTF-8 source files from a ZIP archive."""
     project = _get_owned_project(project_id, current_user, database)
     archive_bytes = await archive.read()
-    if len(archive_bytes) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Archive is larger than 5 MB")
-
-    imported_files = 0
-    skipped_files = 0
     try:
-        zip_file = zipfile.ZipFile(BytesIO(archive_bytes))
-    except zipfile.BadZipFile as error:
-        raise HTTPException(
-            status_code=400, detail="Uploaded file is not a valid ZIP archive"
-        ) from error
+        entries, skipped_files = extract_safe_text_files(archive_bytes)
+    except ArchiveSecurityError as error:
+        status_code = 413 if "larger" in str(error) or "more than" in str(error) else 400
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
 
-    members = [member for member in zip_file.infolist() if not member.is_dir()]
-    if len(members) > 100:
-        raise HTTPException(status_code=413, detail="Archive contains more than 100 files")
-
-    for member in members:
-        path = PurePosixPath(member.filename)
-        if path.is_absolute() or ".." in path.parts:
-            skipped_files += 1
-            continue
-        try:
-            content = zip_file.read(member).decode("utf-8")
-        except (UnicodeDecodeError, ValueError, zipfile.BadZipFile):
-            skipped_files += 1
-            continue
-        if not content or len(content) > 100_000:
-            skipped_files += 1
-            continue
-
-        path_string = path.as_posix()
+    for entry in entries:
         existing_file = (
             database.query(ProjectFile)
-            .filter(ProjectFile.project_id == project.id, ProjectFile.path == path_string)
+            .filter(ProjectFile.project_id == project.id, ProjectFile.path == entry.path)
             .one_or_none()
         )
         if existing_file is None:
-            project.files.append(ProjectFile(path=path_string, content=content))
+            project.files.append(ProjectFile(path=entry.path, content=entry.content))
         else:
-            existing_file.content = content
-        imported_files += 1
+            existing_file.content = entry.content
 
     database.commit()
     cache.delete(project_cache_key(current_user.id))
     return ArchiveUploadResponse(
         project_id=project.id,
-        imported_files=imported_files,
+        imported_files=len(entries),
         skipped_files=skipped_files,
     )
 

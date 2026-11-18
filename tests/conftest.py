@@ -4,16 +4,17 @@ os.environ["APP_ENV"] = "test"
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
-from app.db.session import Base, get_db
-from app.main import app, review_service
 
 
 @pytest.fixture()
 def client():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+    from sqlalchemy.pool import StaticPool
+
+    from app.db.session import Base, get_db
+    from app.main import app
+
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -53,4 +54,3 @@ def fake_review_service(monkeypatch):
             )
 
     monkeypatch.setattr("app.main.review_service", FakeReviewService())
-    return review_service
