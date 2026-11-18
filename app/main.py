@@ -36,7 +36,7 @@ from app.observability import (
     unhandled_error_handler,
     validation_error_handler,
 )
-from app.queue import enqueue_review, get_queue_health
+from app.queue import enqueue_review, get_queue_health, get_worker_health
 from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
@@ -133,12 +133,7 @@ def detailed_health_check() -> HealthResponse:
 
     queue_status, queue_detail = get_queue_health()
     components["redis"] = HealthComponent(status=queue_status, detail=queue_detail)
-    worker_status = "ok" if settings.redis_url else "degraded"
-    worker_detail = (
-        "Durable RQ worker can be started with python -m app.worker"
-        if settings.redis_url
-        else "Using in-process fallback worker"
-    )
+    worker_status, worker_detail = get_worker_health()
     try:
         stale_cutoff = datetime.utcnow() - timedelta(seconds=settings.job_stale_seconds)
         with SessionLocal() as database:

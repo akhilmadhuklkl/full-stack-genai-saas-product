@@ -51,6 +51,7 @@ python -m app.worker
 
 The worker listens on the `forge-reviews` queue. Review jobs retry up to two times with
 short backoff intervals. The job API exposes attempt count, start time, and heartbeat time.
+The worker publishes a short-lived heartbeat that is included in `/health/details`.
 
 If jobs remain queued:
 

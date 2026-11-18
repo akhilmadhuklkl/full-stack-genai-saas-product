@@ -34,6 +34,19 @@ def get_queue_health() -> tuple[str, str]:
     return "ok", f"Redis reachable; {len(queue)} review job(s) queued"
 
 
+def get_worker_health() -> tuple[str, str]:
+    """Return whether the named durable review worker has a live heartbeat."""
+    if not settings.redis_url:
+        return "degraded", "Using in-process fallback worker"
+    try:
+        client = Redis.from_url(settings.redis_url)
+        if client.get("forge:worker:forge-review-worker"):
+            return "ok", "Durable review worker heartbeat is active"
+        return "degraded", "Redis is reachable but no durable worker heartbeat is active"
+    except Exception:
+        return "unavailable", "Could not read durable worker heartbeat"
+
+
 def enqueue_review(review_id: int):
     """Enqueue a review durably, or use the local fallback in development."""
     queue = get_review_queue()
