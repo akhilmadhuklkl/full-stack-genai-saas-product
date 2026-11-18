@@ -4,7 +4,11 @@ All notable changes to Forge Review are documented here.
 
 ## [Unreleased]
 
-- Continue improving the local-first AI code-review workflow.
+- Review job retries, execution metadata, and failed-review retry controls
+- JSON and Markdown review exports
+- Review history search, filtering, pagination, and dashboard charts
+- OpenAPI contract, workflow, security-boundary, and observability tests
+- Local operations and troubleshooting runbook
 
 ## [0.1.0] - 2026-11-18
 

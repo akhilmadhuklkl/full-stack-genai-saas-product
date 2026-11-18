@@ -9,11 +9,13 @@
 5. Save the request and response.
 6. Enforce a basic per-user usage limit.
 
-## Later capabilities
+## Future capabilities
 
 - Agent tools and multi-step workflows
 - Repository or document retrieval
 - Vector search
-- Background jobs for long-running tasks
 - Subscription billing
-- Observability and production deployment
+- Production deployment
+
+Background jobs and basic observability are implemented for the local MVP. Agent tools,
+retrieval, vector search, billing, and deployment remain future milestones.

@@ -45,8 +45,8 @@ Python environment and confirm the GitHub Actions job is green.
 
 The project now supports a Redis-backed RQ queue and a separate worker process. Without
 `REDIS_URL`, it intentionally falls back to an in-process worker for local development.
-Production still needs worker deployment, queue monitoring, retry policy review, and recovery
-runbooks.
+Production still needs worker deployment, queue monitoring, and operational alerting. Retry
+behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
 
 ### 3. Authentication hardening
 
@@ -75,16 +75,15 @@ webhooks are not implemented. Billing remains intentionally deferred.
 Deployment, TLS, domain configuration, managed PostgreSQL, Redis, secrets management,
 backups, monitoring, alerting, and autoscaling are not implemented yet.
 
-## Recommended next sequence
+## Recommended pre-deployment sequence
 
 1. Resolve the local SQLAlchemy runtime issue and verify CI is green.
-2. Add stronger integration tests around background jobs and archive security.
-3. Replace the in-process worker with a durable queue.
-4. Add token expiry and production authentication flows.
-5. Add production database/file retention policies.
-6. Add monitoring and alerting.
-7. Decide on billing scope.
-8. Begin deployment planning only after these checks pass.
+2. Review stronger integration tests around background jobs and archive security.
+3. Add token expiry and production authentication flows.
+4. Add production database/file retention policies.
+5. Add monitoring and alerting.
+6. Decide on billing scope.
+7. Begin deployment planning only after these checks pass.
 
 ## Readiness decision
 
