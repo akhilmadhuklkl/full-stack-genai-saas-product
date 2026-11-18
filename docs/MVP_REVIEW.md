@@ -52,7 +52,8 @@ behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
 
 Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default), and refresh
 tokens plus persistent access-token revocation and refresh-token rotation are implemented.
-Production authentication still needs secure browser storage,
+Production authentication now supports an HttpOnly browser cookie in addition to bearer
+headers. The frontend should prefer the cookie path in production. It still needs
 and email verification/reset flows. Login abuse throttling is implemented as a
 Redis-backed when `REDIS_URL` is configured, with a process-local fallback for development.
 

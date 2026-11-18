@@ -12,6 +12,9 @@ All `/api/v1` routes use JSON unless noted otherwise. Protected routes require:
 Authorization: Bearer <access_token>
 ```
 
+Browser clients may use the `HttpOnly` `forge_access_token` cookie set during registration
+or login. API clients can continue using the bearer-token header.
+
 ## Authentication and account
 
 | Method | Route | Purpose |

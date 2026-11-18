@@ -164,7 +164,11 @@ def detailed_health_check() -> HealthResponse:
 
 
 @app.post("/api/v1/auth/register", response_model=AuthResponse, status_code=201, tags=["auth"])
-def register(request: RegisterRequest, database: Session = Depends(get_db)) -> AuthResponse:
+def register(
+    request: RegisterRequest,
+    response: Response,
+    database: Session = Depends(get_db),
+) -> AuthResponse:
     """Create a user account and return its access token."""
     email = request.email.strip().lower()
     if database.query(User).filter(User.email == email).one_or_none() is not None:
@@ -174,11 +178,17 @@ def register(request: RegisterRequest, database: Session = Depends(get_db)) -> A
     database.add(user)
     database.commit()
     database.refresh(user)
-    return _auth_response(user.id)
+    auth_response = _auth_response(user.id)
+    _set_access_cookie(response, auth_response.access_token)
+    return auth_response
 
 
 @app.post("/api/v1/auth/login", response_model=AuthResponse, tags=["auth"])
-def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthResponse:
+def login(
+    request: LoginRequest,
+    response: Response,
+    database: Session = Depends(get_db),
+) -> AuthResponse:
     """Authenticate a user and return its access token."""
     email = request.email.strip().lower()
     login_attempt_limiter.check(email)
@@ -191,7 +201,9 @@ def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthRes
             headers={"WWW-Authenticate": "Bearer"},
         )
     login_attempt_limiter.reset(email)
-    return _auth_response(user.id)
+    auth_response = _auth_response(user.id)
+    _set_access_cookie(response, auth_response.access_token)
+    return auth_response
 
 
 def _auth_response(user_id: int) -> AuthResponse:
@@ -199,6 +211,18 @@ def _auth_response(user_id: int) -> AuthResponse:
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
         user_id=user_id,
+    )
+
+
+def _set_access_cookie(response: Response, access_token: str) -> None:
+    response.set_cookie(
+        key="forge_access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.app_env == "production",
+        samesite="lax",
+        max_age=settings.auth_token_ttl_seconds,
+        path="/",
     )
 
 
@@ -245,7 +269,9 @@ def logout(
             )
         )
         database.commit()
-    return Response(status_code=204)
+    response = Response(status_code=204)
+    response.delete_cookie("forge_access_token", path="/")
+    return response
 
 
 @app.get("/api/v1/me", response_model=AccountResponse, tags=["account"])
