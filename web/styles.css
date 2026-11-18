@@ -81,8 +81,11 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .compact h3 { margin: 5px 0 0; }
 .history-block { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
 .review-history { display: grid; gap: 8px; }
-.review-history button { display: flex; justify-content: space-between; align-items: center; text-align: left; border: 1px solid var(--line); background: #fbfcf9; border-radius: 8px; padding: 10px 12px; color: var(--ink); }
-.review-history button:hover { border-color: var(--accent-deep); background: #f4f8e7; }
+.history-row { display: flex; gap: 8px; align-items: stretch; }
+.history-review { flex: 1; display: flex; justify-content: space-between; align-items: center; text-align: left; border: 1px solid var(--line); background: #fbfcf9; border-radius: 8px; padding: 10px 12px; color: var(--ink); }
+.history-review:hover { border-color: var(--accent-deep); background: #f4f8e7; }
+.retry-button { border: 1px solid #f0c3c3; border-radius: 8px; background: #fff7f7; color: var(--danger); padding: 0 11px; font-size: 11px; font-weight: 800; }
+.retry-button:hover { background: #fde4e4; }
 .review-history small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
 .history-status { font-size: 10px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .history-status.completed { color: var(--accent-deep); }

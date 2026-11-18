@@ -311,6 +311,41 @@ def get_job(
     )
 
 
+@app.post("/api/v1/reviews/{review_id}/retry", response_model=JobResponse, tags=["jobs"])
+def retry_review(
+    review_id: int,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JobResponse:
+    """Reset a failed review and enqueue it again."""
+    review = _get_owned_review(review_id, current_user, database)
+    job = database.query(ReviewJob).filter(ReviewJob.review_id == review.id).one_or_none()
+    if job is None or review.status != "failed" or job.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed reviews can be retried")
+
+    review.status = "queued"
+    job.status = "queued"
+    job.attempt_count = 0
+    job.error_message = None
+    job.started_at = None
+    job.heartbeat_at = None
+    job.completed_at = None
+    database.commit()
+    database.refresh(job)
+    enqueue_review(review.id)
+    return JobResponse(
+        id=job.id,
+        review_id=job.review_id,
+        status=job.status,
+        attempt_count=job.attempt_count,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        heartbeat_at=job.heartbeat_at,
+        completed_at=job.completed_at,
+    )
+
+
 @app.get("/api/v1/projects", response_model=list[ProjectResponse], tags=["projects"])
 def list_projects(
     database: Session = Depends(get_db), current_user: User = Depends(get_current_user)

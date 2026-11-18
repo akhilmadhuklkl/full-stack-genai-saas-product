@@ -104,9 +104,21 @@ async function loadReviewHistory() {
     const status = review.job_status || review.status;
     const attempt = review.attempt_count ? ` · attempt ${review.attempt_count}` : '';
     const timing = review.completed_at ? ` · finished ${new Date(review.completed_at).toLocaleTimeString()}` : '';
-    return `<button data-review-id="${review.id}"><span><strong>Review #${review.id}</strong><small>${escapeHtml(review.prompt_version)}${attempt}${timing}</small></span><em class="history-status ${escapeHtml(status)}">${escapeHtml(status)}</em></button>`;
+    const retry = status === 'failed' ? `<button class="retry-button" data-retry-id="${review.id}" type="button">Retry</button>` : '';
+    return `<div class="history-row"><button class="history-review" data-review-id="${review.id}" type="button"><span><strong>Review #${review.id}</strong><small>${escapeHtml(review.prompt_version)}${attempt}${timing}</small></span><em class="history-status ${escapeHtml(status)}">${escapeHtml(status)}</em></button>${retry}</div>`;
   }).join('') : '<div class="empty-state">No review runs yet.</div>';
   document.querySelectorAll('[data-review-id]').forEach((button) => { button.onclick = () => showReview(Number(button.dataset.reviewId)); });
+  document.querySelectorAll('[data-retry-id]').forEach((button) => { button.onclick = () => retryReview(Number(button.dataset.retryId)); });
+}
+
+async function retryReview(reviewId) {
+  const response = await api(`/api/v1/reviews/${reviewId}/retry`, { method: 'POST' });
+  if (!response.ok) return toast('Only failed reviews can be retried');
+  $('review-status').textContent = 'queued';
+  $('stream-output').textContent = 'Retry queued. Ollama will analyze the project again…';
+  await loadReviewHistory();
+  await loadStats();
+  toast('Review retry queued');
 }
 
 function renderFiles() {
