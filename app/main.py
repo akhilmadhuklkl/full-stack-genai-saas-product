@@ -210,6 +210,13 @@ def refresh_token(request: RefreshRequest, database: Session = Depends(get_db)) 
     user = database.get(User, claims.user_id) if claims is not None and revoked is None else None
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
+    database.add(
+        RevokedToken(
+            token_hash=token_hash(request.refresh_token),
+            expires_at=datetime.utcfromtimestamp(claims.expires_at),
+        )
+    )
+    database.commit()
     return _auth_response(user.id)
 
 

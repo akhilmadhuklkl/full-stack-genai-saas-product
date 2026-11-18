@@ -51,8 +51,8 @@ behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
 ### 3. Authentication hardening
 
 Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default), and refresh
-tokens plus persistent access-token revocation are implemented. Production authentication
-still needs refresh-token rotation, secure browser storage,
+tokens plus persistent access-token revocation and refresh-token rotation are implemented.
+Production authentication still needs secure browser storage,
 account lockout or abuse controls, and email verification/reset flows.
 
 ### 4. File storage and limits

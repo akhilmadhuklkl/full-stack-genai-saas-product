@@ -64,6 +64,10 @@ The current worker timeout and stale threshold are controlled by `OLLAMA_TIMEOUT
 and `JOB_STALE_SECONDS`. A stale job should be retried after confirming that no worker is
 still processing it.
 
+Refresh tokens are single-use. A successful refresh revokes the supplied refresh token and
+returns a replacement pair. Reusing an older refresh token returns `401` and should be
+treated as a possible token replay event.
+
 ## Failed reviews
 
 A failed review stores an error message and can be retried from the review history panel.
