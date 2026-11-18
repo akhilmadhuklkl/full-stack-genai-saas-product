@@ -561,6 +561,8 @@ def create_file(
 ) -> FileResponse:
     """Add one source file to an owned project."""
     project = _get_owned_project(project_id, current_user, database)
+    if len(project.files) >= 1000:
+        raise HTTPException(status_code=413, detail="Project cannot contain more than 1000 files")
     path = request.path.strip()
     if not path:
         raise HTTPException(status_code=422, detail="File path cannot be blank")
@@ -599,8 +601,17 @@ async def upload_archive(
     try:
         entries, skipped_files = extract_safe_text_files(archive_bytes)
     except ArchiveSecurityError as error:
-        status_code = 413 if "larger" in str(error) or "more than" in str(error) else 400
+        status_code = (
+            413
+            if any(marker in str(error) for marker in ("larger", "more than", "expands"))
+            else 400
+        )
         raise HTTPException(status_code=status_code, detail=str(error)) from error
+
+    existing_paths = {project_file.path for project_file in project.files}
+    new_paths = {entry.path for entry in entries if entry.path not in existing_paths}
+    if len(project.files) + len(new_paths) > 1000:
+        raise HTTPException(status_code=413, detail="Project cannot contain more than 1000 files")
 
     for entry in entries:
         existing_file = (

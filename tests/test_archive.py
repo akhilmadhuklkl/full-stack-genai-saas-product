@@ -8,7 +8,7 @@ from app.archive import ArchiveSecurityError, extract_safe_text_files
 
 def make_zip(files: dict[str, bytes]) -> bytes:
     output = BytesIO()
-    with zipfile.ZipFile(output, "w") as archive:
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path, content in files.items():
             archive.writestr(path, content)
     return output.getvalue()
@@ -33,3 +33,8 @@ def test_archive_skips_binary_files() -> None:
 def test_invalid_archive_is_rejected() -> None:
     with pytest.raises(ArchiveSecurityError, match="valid ZIP"):
         extract_safe_text_files(b"not-a-zip")
+
+
+def test_archive_rejects_large_expanded_content() -> None:
+    with pytest.raises(ArchiveSecurityError, match="20 MB extracted limit"):
+        extract_safe_text_files(make_zip({"large.txt": b"x" * (20 * 1024 * 1024 + 1)}))

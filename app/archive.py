@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 MAX_ARCHIVE_BYTES = 5 * 1024 * 1024
 MAX_ARCHIVE_FILES = 100
 MAX_FILE_BYTES = 100_000
+MAX_TOTAL_EXTRACTED_BYTES = 20 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ def extract_safe_text_files(archive_bytes: bytes) -> tuple[list[ArchiveEntry], i
     members = [member for member in zip_file.infolist() if not member.is_dir()]
     if len(members) > MAX_ARCHIVE_FILES:
         raise ArchiveSecurityError("Archive contains more than 100 files")
+    if sum(member.file_size for member in members) > MAX_TOTAL_EXTRACTED_BYTES:
+        raise ArchiveSecurityError("Archive expands beyond the 20 MB extracted limit")
 
     entries: list[ArchiveEntry] = []
     skipped_files = 0
