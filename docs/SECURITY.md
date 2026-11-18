@@ -45,10 +45,9 @@ and a documented source-code retention policy.
 
 ## Email-dependent features
 
-Password reset and email verification are intentionally not implemented until an email
-provider, delivery domain, bounce handling, and abuse controls are selected. Do not add an
-endpoint that returns reset tokens to the browser as a substitute; that would not be a safe
-production flow.
+Password reset and email verification use one-time hashed database tokens. Local development
+uses a console email adapter; production requires `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`,
+and a verified `EMAIL_FROM` identity. Tokens are never returned by the API.
 
 ## Pre-production checklist
 

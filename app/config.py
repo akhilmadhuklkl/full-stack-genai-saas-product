@@ -18,6 +18,10 @@ class Settings:
     ollama_timeout_seconds: float
     job_stale_seconds: int
     cors_origins: tuple[str, ...]
+    email_provider: str
+    resend_api_key: str | None
+    email_from: str
+    public_base_url: str
 
 
 def load_settings() -> Settings:
@@ -39,12 +43,18 @@ def load_settings() -> Settings:
             for origin in os.getenv("CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",")
             if origin.strip()
         ),
+        email_provider=os.getenv("EMAIL_PROVIDER", "console").lower(),
+        resend_api_key=os.getenv("RESEND_API_KEY") or None,
+        email_from=os.getenv("EMAIL_FROM", "noreply@example.com"),
+        public_base_url=os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
     )
     if settings.app_env == "production":
         if len(settings.auth_secret) < 32 or settings.auth_secret == "local-development-secret":
             raise RuntimeError("Production requires a strong AUTH_SECRET of at least 32 characters")
         if not settings.cors_origins:
             raise RuntimeError("Production requires at least one CORS_ORIGINS entry")
+        if settings.email_provider != "resend" or not settings.resend_api_key:
+            raise RuntimeError("Production requires EMAIL_PROVIDER=resend and RESEND_API_KEY")
     return settings
 
 

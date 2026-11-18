@@ -25,6 +25,10 @@ header.
 | POST | `/api/v1/auth/login` | Sign in and receive a token |
 | POST | `/api/v1/auth/refresh` | Exchange a refresh token for new credentials |
 | POST | `/api/v1/auth/logout` | Revoke the current access token |
+| POST | `/api/v1/auth/verify-email/request` | Request an email verification message |
+| POST | `/api/v1/auth/verify-email/confirm` | Consume an email verification token |
+| POST | `/api/v1/auth/password-reset/request` | Request a password reset message |
+| POST | `/api/v1/auth/password-reset/confirm` | Consume a password reset token |
 | GET | `/api/v1/me` | Read the current account |
 | POST | `/api/v1/me/password` | Change the current password |
 | GET | `/api/v1/me/usage` | Read hourly review usage |

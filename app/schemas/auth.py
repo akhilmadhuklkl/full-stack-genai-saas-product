@@ -30,3 +30,26 @@ class AuthResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=20)
+
+
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class TokenRequest(BaseModel):
+    token: str = Field(min_length=20)
+
+
+class PasswordResetConfirmRequest(TokenRequest):
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        if not any(character.isupper() for character in value):
+            raise ValueError("Password must contain an uppercase letter")
+        if not any(character.islower() for character in value):
+            raise ValueError("Password must contain a lowercase letter")
+        if not any(character.isdigit() for character in value):
+            raise ValueError("Password must contain a number")
+        return value

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import secrets
@@ -21,6 +22,7 @@ from app.archive import ArchiveSecurityError, extract_safe_text_files
 from app.cache import cache
 from app.config import settings
 from app.db.models import (
+    EmailToken,
     Project,
     ProjectFile,
     Review,
@@ -32,6 +34,7 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, create_tables, engine, get_db
 from app.dependencies import get_current_user
+from app.email import EmailDeliveryError, send_email
 from app.limits import login_attempt_limiter, review_rate_limiter
 from app.observability import (
     CSRFMiddleware,
@@ -43,7 +46,15 @@ from app.observability import (
 from app.queue import enqueue_review, get_queue_health, get_worker_health
 from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
-from app.schemas.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
+from app.schemas.auth import (
+    AuthResponse,
+    EmailRequest,
+    LoginRequest,
+    PasswordResetConfirmRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenRequest,
+)
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
 from app.schemas.health import HealthComponent, HealthResponse
 from app.schemas.job import JobResponse
@@ -71,6 +82,7 @@ from app.security import (
 )
 from app.time import utcnow
 
+logger = logging.getLogger("forge_review")
 review_service = OllamaReviewService()
 
 
@@ -233,9 +245,110 @@ def register(
     database.add(user)
     database.commit()
     database.refresh(user)
+    _send_email_token(database, user, "verify_email")
     auth_response = _auth_response(user.id)
     _set_access_cookie(response, auth_response.access_token)
     return auth_response
+
+
+def _token_digest(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _send_email_token(database: Session, user: User, purpose: str) -> None:
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = utcnow() + timedelta(hours=24 if purpose == "verify_email" else 1)
+    database.query(EmailToken).filter(
+        EmailToken.user_id == user.id,
+        EmailToken.purpose == purpose,
+        EmailToken.used_at.is_(None),
+    ).update({EmailToken.used_at: utcnow()}, synchronize_session=False)
+    database.add(
+        EmailToken(
+            user_id=user.id,
+            token_hash=_token_digest(raw_token),
+            purpose=purpose,
+            expires_at=expires_at,
+        )
+    )
+    database.commit()
+    action = "verify-email" if purpose == "verify_email" else "reset-password"
+    subject = (
+        "Verify your Forge Review email"
+        if purpose == "verify_email"
+        else "Reset your Forge Review password"
+    )
+    try:
+        send_email(
+            user.email,
+            subject,
+            f"Complete this action: {settings.public_base_url}/auth/{action}?token={raw_token}",
+        )
+    except EmailDeliveryError:
+        logger.exception("email_delivery_failed purpose=%s user_id=%s", purpose, user.id)
+
+
+def _consume_email_token(database: Session, raw_token: str, purpose: str) -> EmailToken:
+    token = (
+        database.query(EmailToken)
+        .filter(
+            EmailToken.token_hash == _token_digest(raw_token),
+            EmailToken.purpose == purpose,
+            EmailToken.used_at.is_(None),
+            EmailToken.expires_at > utcnow(),
+        )
+        .one_or_none()
+    )
+    if token is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    token.used_at = utcnow()
+    return token
+
+
+@app.post("/api/v1/auth/verify-email/request", status_code=202, tags=["auth"])
+def request_email_verification(
+    request: EmailRequest, database: Session = Depends(get_db)
+) -> dict[str, str]:
+    user = database.query(User).filter(User.email == request.email.strip().lower()).one_or_none()
+    if user is not None and not user.email_verified:
+        _send_email_token(database, user, "verify_email")
+    return {"message": "If the account exists, a verification email has been sent."}
+
+
+@app.post("/api/v1/auth/verify-email/confirm", status_code=204, tags=["auth"])
+def confirm_email_verification(
+    request: TokenRequest, database: Session = Depends(get_db)
+) -> Response:
+    token = _consume_email_token(database, request.token, "verify_email")
+    user = database.get(User, token.user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    user.email_verified = True
+    database.commit()
+    return Response(status_code=204)
+
+
+@app.post("/api/v1/auth/password-reset/request", status_code=202, tags=["auth"])
+def request_password_reset(
+    request: EmailRequest, database: Session = Depends(get_db)
+) -> dict[str, str]:
+    user = database.query(User).filter(User.email == request.email.strip().lower()).one_or_none()
+    if user is not None:
+        _send_email_token(database, user, "password_reset")
+    return {"message": "If the account exists, a password reset email has been sent."}
+
+
+@app.post("/api/v1/auth/password-reset/confirm", status_code=204, tags=["auth"])
+def confirm_password_reset(
+    request: PasswordResetConfirmRequest, database: Session = Depends(get_db)
+) -> Response:
+    token = _consume_email_token(database, request.token, "password_reset")
+    user = database.get(User, token.user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    user.password_hash = hash_password(request.password)
+    database.commit()
+    return Response(status_code=204)
 
 
 @app.post("/api/v1/auth/login", response_model=AuthResponse, tags=["auth"])
