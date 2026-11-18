@@ -59,6 +59,11 @@ If jobs remain queued:
 3. Check the worker logs for `review_worker_started` and job failures.
 4. Inspect the job endpoint shown in the UI or call `GET /api/v1/jobs/{job_id}`.
 
+If `/health/details` reports stale heartbeats, inspect those jobs before retrying them.
+The current worker timeout and stale threshold are controlled by `OLLAMA_TIMEOUT_SECONDS`
+and `JOB_STALE_SECONDS`. A stale job should be retried after confirming that no worker is
+still processing it.
+
 ## Failed reviews
 
 A failed review stores an error message and can be retried from the review history panel.

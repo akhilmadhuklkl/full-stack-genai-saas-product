@@ -28,7 +28,7 @@ from app.db.models import (
     UsageRecord,
     User,
 )
-from app.db.session import create_tables, engine, get_db
+from app.db.session import SessionLocal, create_tables, engine, get_db
 from app.dependencies import get_current_user
 from app.limits import review_rate_limiter
 from app.observability import (
@@ -133,14 +133,30 @@ def detailed_health_check() -> HealthResponse:
 
     queue_status, queue_detail = get_queue_health()
     components["redis"] = HealthComponent(status=queue_status, detail=queue_detail)
-    components["workers"] = HealthComponent(
-        status="ok" if settings.redis_url else "degraded",
-        detail=(
-            "Durable RQ worker can be started with python -m app.worker"
-            if settings.redis_url
-            else "Using in-process fallback worker"
-        ),
+    worker_status = "ok" if settings.redis_url else "degraded"
+    worker_detail = (
+        "Durable RQ worker can be started with python -m app.worker"
+        if settings.redis_url
+        else "Using in-process fallback worker"
     )
+    try:
+        stale_cutoff = datetime.utcnow() - timedelta(seconds=settings.job_stale_seconds)
+        with SessionLocal() as database:
+            stale_jobs = (
+                database.query(ReviewJob)
+                .filter(
+                    ReviewJob.status == "processing",
+                    ReviewJob.heartbeat_at < stale_cutoff,
+                )
+                .count()
+            )
+        if stale_jobs:
+            worker_status = "degraded"
+            worker_detail = f"{stale_jobs} review job(s) have stale heartbeats"
+    except SQLAlchemyError:
+        worker_status = "degraded"
+        worker_detail = "Could not inspect review job heartbeats"
+    components["workers"] = HealthComponent(status=worker_status, detail=worker_detail)
     overall_status = (
         "ok" if all(item.status == "ok" for item in components.values()) else "degraded"
     )
