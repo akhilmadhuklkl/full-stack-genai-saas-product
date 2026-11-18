@@ -50,8 +50,8 @@ behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
 
 ### 3. Authentication hardening
 
-The current bearer tokens are signed but do not expire or support revocation. Production
-authentication needs token expiry, refresh/revocation behavior, secure browser storage,
+Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default). Production
+authentication still needs refresh/revocation behavior, secure browser storage,
 account lockout or abuse controls, and email verification/reset flows.
 
 ### 4. File storage and limits

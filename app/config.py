@@ -13,6 +13,7 @@ class Settings:
     ollama_model: str
     redis_url: str | None
     prompt_version: str
+    auth_token_ttl_seconds: int
 
 
 def load_settings() -> Settings:
@@ -25,6 +26,7 @@ def load_settings() -> Settings:
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
         redis_url=os.getenv("REDIS_URL") or None,
         prompt_version=os.getenv("PROMPT_VERSION", "v1"),
+        auth_token_ttl_seconds=int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "3600")),
     )
 
 
