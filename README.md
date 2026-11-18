@@ -64,6 +64,9 @@ Interactive API documentation is available at:
 
 See [docs/API.md](docs/API.md) for the route overview.
 
+GitHub Actions runs compilation, linting, migration setup, frontend syntax validation,
+and tests on pushes and pull requests targeting `main`.
+
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.
 
