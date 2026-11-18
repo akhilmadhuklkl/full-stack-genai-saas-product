@@ -33,6 +33,7 @@ from app.dependencies import get_current_user
 from app.limits import login_attempt_limiter, review_rate_limiter
 from app.observability import (
     RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
     unhandled_error_handler,
     validation_error_handler,
 )
@@ -87,6 +88,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_error_handler)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")

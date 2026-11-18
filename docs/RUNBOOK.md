@@ -120,6 +120,8 @@ must not be committed to the repository.
 - `GET /health/details` checks the database, Ollama, Redis, and worker availability.
 - `GET /metrics` exposes review, queue, and stale-job gauges for future monitoring.
 - Every HTTP response includes `X-Request-ID`.
+- HTTP responses include browser security headers such as `X-Content-Type-Options`,
+  `X-Frame-Options`, and a restrictive Content Security Policy.
 - The same ID is included in request completion and unhandled-error logs.
 
 When reporting a failure, include the request ID, job ID, endpoint, and approximate time,
