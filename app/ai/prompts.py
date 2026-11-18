@@ -2,7 +2,10 @@ CURRENT_PROMPT_VERSION = "v1"
 
 
 def build_code_review_prompt(
-    project_name: str, files: list[tuple[str, str]], version: str = CURRENT_PROMPT_VERSION
+    project_name: str,
+    files: list[tuple[str, str]],
+    version: str = CURRENT_PROMPT_VERSION,
+    review_instructions: str | None = None,
 ) -> str:
     """Build a versioned code-review prompt."""
     if version != CURRENT_PROMPT_VERSION:
@@ -10,7 +13,11 @@ def build_code_review_prompt(
     file_blocks = "\n\n".join(
         f"FILE: {path}\n```\n{content}\n```" for path, content in files
     )
+    instructions = review_instructions or "No project-specific instructions provided."
     return f"""You are a careful code reviewer. Review project '{project_name}'.
+
+Project-specific instructions:
+{instructions}
 
 Analyze the supplied source files for concrete bugs, security issues, performance problems,
 and maintainability concerns. Do not invent issues. Return JSON only in this exact shape:

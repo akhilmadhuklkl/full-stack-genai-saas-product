@@ -36,6 +36,7 @@ class ProjectFileResponse(BaseModel):
 class ProjectResponse(BaseModel):
     id: int
     name: str
+    review_instructions: str | None = None
     files: list[ProjectFileResponse]
 
 

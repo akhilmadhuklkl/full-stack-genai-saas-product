@@ -53,6 +53,8 @@ async function selectProject(id) {
   }));
   $('page-title').textContent = state.selectedProject.name;
   $('project-name').textContent = state.selectedProject.name;
+  $('settings-name').value = state.selectedProject.name;
+  $('settings-instructions').value = state.selectedProject.review_instructions || '';
   $('project-count').textContent = `${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
   $('run-review').disabled = state.files.length === 0;
   renderFiles();
@@ -170,6 +172,8 @@ $('new-project').onclick = createProject;
 $('file-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const response = await api(`/api/v1/projects/${state.selectedProject.id}/files`, { method: 'POST', body: JSON.stringify({ path: $('file-path').value, content: $('file-content').value }) }); if (response.ok) { $('file-path').value = ''; $('file-content').value = ''; await selectProject(state.selectedProject.id); toast('File added'); } else toast('Could not add file'); };
 $('archive-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const input = $('archive-input'); if (!input.files.length) return toast('Choose a ZIP archive first'); $('archive-status').textContent = 'Importing archive…'; const formData = new FormData(); formData.append('archive', input.files[0]); const response = await uploadApi(`/api/v1/projects/${state.selectedProject.id}/archive`, formData); if (!response.ok) { $('archive-status').textContent = 'Import failed'; return toast('Could not import archive'); } const result = await response.json(); $('archive-status').textContent = `${result.imported_files} imported · ${result.skipped_files} skipped`; input.value = ''; await selectProject(state.selectedProject.id); toast('Archive imported'); };
 $('run-review').onclick = runReview;
+$('settings-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return; const response = await api(`/api/v1/projects/${state.selectedProject.id}`, { method: 'PATCH', body: JSON.stringify({ name: $('settings-name').value, review_instructions: $('settings-instructions').value || null }) }); if (!response.ok) { $('settings-status').textContent = 'Could not save settings'; return; } $('settings-status').textContent = 'Settings saved'; await loadProjects(); await selectProject(state.selectedProject.id); toast('Settings saved'); };
+$('delete-project').onclick = async () => { if (!state.selectedProject || !confirm(`Delete ${state.selectedProject.name}?`)) return; const response = await api(`/api/v1/projects/${state.selectedProject.id}`, { method: 'DELETE' }); if (!response.ok) return toast('Could not delete project'); state.selectedProject = null; await loadProjects(); $('page-title').textContent = 'Welcome to Forge Review'; $('project-name').textContent = 'Select a project'; $('file-list').innerHTML = '<div class="empty-state">Create or select a project to begin.</div>'; toast('Project deleted'); };
 $('file-search').oninput = renderFiles;
 $('review-status-filter').onchange = loadReviewHistory;
 $('severity-filter').onchange = () => { if (state.currentReviewId) showReview(state.currentReviewId); };

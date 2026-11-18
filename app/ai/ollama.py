@@ -40,8 +40,9 @@ class OllamaReviewService:
         project_name: str,
         files: list[tuple[str, str]],
         prompt_version: str = CURRENT_PROMPT_VERSION,
+        review_instructions: str | None = None,
     ) -> ReviewResult:
-        prompt = build_code_review_prompt(project_name, files, prompt_version)
+        prompt = build_code_review_prompt(project_name, files, prompt_version, review_instructions)
         try:
             response = httpx.post(
                 f"{self.base_url}/api/chat",
@@ -69,9 +70,10 @@ class OllamaReviewService:
         project_name: str,
         files: list[tuple[str, str]],
         prompt_version: str = CURRENT_PROMPT_VERSION,
+        review_instructions: str | None = None,
     ) -> Iterator[str]:
         """Yield model content fragments while Ollama generates a review."""
-        prompt = build_code_review_prompt(project_name, files, prompt_version)
+        prompt = build_code_review_prompt(project_name, files, prompt_version, review_instructions)
         try:
             with httpx.stream(
                 "POST",

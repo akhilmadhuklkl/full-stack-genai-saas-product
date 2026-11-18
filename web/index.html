@@ -45,6 +45,13 @@
           <div class="workspace-grid">
             <section class="panel project-panel">
               <div class="section-heading"><div><span class="eyebrow">Project</span><h2 id="project-name">Select a project</h2></div><span id="project-count" class="count-badge">0 files</span></div>
+              <form id="settings-form" class="settings-form">
+                <div class="eyebrow">Project settings</div>
+                <label>Project name<input id="settings-name" required maxlength="100" /></label>
+                <label>Review instructions<textarea id="settings-instructions" class="small-textarea" maxlength="5000" placeholder="Optional guidance for the AI reviewer..."></textarea></label>
+                <div class="settings-actions"><button class="secondary-button" type="submit">Save settings</button><button id="delete-project" class="danger-button" type="button">Delete project</button></div>
+                <div id="settings-status" class="muted"></div>
+              </form>
               <form id="file-form" class="file-form">
                 <label>File path<input id="file-path" required placeholder="src/auth.py" /></label>
                 <label>Source content<textarea id="file-content" required placeholder="Paste a file to review..."></textarea></label>

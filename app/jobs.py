@@ -28,7 +28,12 @@ def process_review(review_id: int, review_service: OllamaReviewService) -> None:
         review.status = "processing"
         database.commit()
         files = [(project_file.path, project_file.content) for project_file in review.project.files]
-        result = review_service.review(review.project.name, files, review.prompt_version)
+        result = review_service.review(
+            review.project.name,
+            files,
+            review.prompt_version,
+            review.project.review_instructions,
+        )
         for finding in result.findings:
             review.findings.append(
                 ReviewFinding(

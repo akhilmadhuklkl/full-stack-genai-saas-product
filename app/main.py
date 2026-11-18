@@ -248,6 +248,7 @@ def list_projects(
         ProjectResponse(
             id=project.id,
             name=project.name,
+            review_instructions=project.review_instructions,
             files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
         )
         for project in current_user.projects
@@ -277,12 +278,21 @@ def create_project(
     if existing_project is not None:
         raise HTTPException(status_code=409, detail="Project name already exists")
 
-    project = Project(owner=current_user, name=name)
+    project = Project(
+        owner=current_user,
+        name=name,
+        review_instructions=request.review_instructions,
+    )
     database.add(project)
     database.commit()
     database.refresh(project)
     cache.delete(project_cache_key(current_user.id))
-    return ProjectResponse(id=project.id, name=project.name, files=[])
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        review_instructions=project.review_instructions,
+        files=[],
+    )
 
 
 @app.patch("/api/v1/projects/{project_id}", response_model=ProjectResponse, tags=["projects"])
@@ -317,12 +327,14 @@ def update_project(
         raise HTTPException(status_code=409, detail="Project name already exists")
 
     project.name = name
+    project.review_instructions = request.review_instructions
     database.commit()
     database.refresh(project)
     cache.delete(project_cache_key(current_user.id))
     return ProjectResponse(
         id=project.id,
         name=project.name,
+        review_instructions=project.review_instructions,
         files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
     )
 
@@ -569,6 +581,7 @@ def get_project(
     return ProjectResponse(
         id=project.id,
         name=project.name,
+        review_instructions=project.review_instructions,
         files=[ProjectFileResponse(id=file.id, path=file.path) for file in project.files],
     )
 
@@ -808,7 +821,12 @@ def run_review(
     files = [(project_file.path, project_file.content) for project_file in review.project.files]
 
     try:
-        result = review_service.review(review.project.name, files, review.prompt_version)
+        result = review_service.review(
+            review.project.name,
+            files,
+            review.prompt_version,
+            review.project.review_instructions,
+        )
         for finding in result.findings:
             review.findings.append(
                 ReviewFinding(
@@ -874,7 +892,10 @@ def stream_review(
                 for project_file in review.project.files
             ]
             for chunk in review_service.stream_review(
-                review.project.name, files, review.prompt_version
+                review.project.name,
+                files,
+                review.prompt_version,
+                review.project.review_instructions,
             ):
                 content_parts.append(chunk)
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"

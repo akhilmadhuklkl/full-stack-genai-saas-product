@@ -58,6 +58,10 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .count-badge, .status-badge { border-radius: 99px; background: #f0f3ee; color: var(--muted); font-size: 11px; padding: 7px 10px; white-space: nowrap; }
 .status-badge { background: var(--accent); color: #50610c; font-weight: 800; }
 .file-form { border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.settings-form { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 5px; }
+.small-textarea { min-height: 75px; }
+.settings-actions { display: flex; gap: 8px; }
+.danger-button { border: 0; border-radius: 9px; padding: 12px 16px; font-weight: 800; color: #8b3535; background: #fde4e4; }
 .archive-form { border-bottom: 1px solid var(--line); padding: 12px 0 20px; }
 .archive-form input[type="file"] { padding: 9px; font-size: 12px; }
 .archive-form button { width: 100%; }
