@@ -243,13 +243,35 @@ function sourceContext(finding) {
   return `<pre class="source-context">${lines.slice(start, end).map((line, index) => `${String(start + index + 1).padStart(4, ' ')}  ${escapeHtml(line)}`).join('\n')}</pre>`;
 }
 
-$('auth-form').onsubmit = async (event) => {
-  event.preventDefault();
+async function submitAuth(event) {
+  event?.preventDefault();
   const mode = $('auth-title').dataset.mode || 'register';
-  const response = await api(`/api/v1/auth/${mode}`, { method: 'POST', body: JSON.stringify({ email: $('auth-email').value, password: $('auth-password').value }) });
-  if (!response.ok) { $('auth-error').textContent = (await response.json()).detail || 'Authentication failed'; return; }
-  await response.json(); state.authenticated = true; renderAuth(); loadProjects();
-};
+  $('auth-error').textContent = '';
+  const button = $('auth-form').querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const response = await api(`/api/v1/auth/${mode}`, {
+      method: 'POST',
+      body: JSON.stringify({ email: $('auth-email').value, password: $('auth-password').value }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      $('auth-error').textContent = error.detail || 'Authentication failed';
+      return;
+    }
+    await response.json();
+    state.authenticated = true;
+    renderAuth();
+    await loadProjects();
+  } catch (error) {
+    $('auth-error').textContent = 'Could not reach the application server';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+$('auth-form').onsubmit = submitAuth;
+$('auth-form').querySelector('button[type="submit"]').onclick = submitAuth;
 
 $('auth-toggle').onclick = () => { const title = $('auth-title'); const register = title.dataset.mode !== 'login'; title.dataset.mode = register ? 'login' : 'register'; title.textContent = register ? 'Welcome back' : 'Create your workspace'; $('auth-toggle').textContent = register ? 'Need an account? Create one' : 'Already have an account? Sign in'; };
 $('forgot-password').onclick = () => { $('reset-request-form').classList.remove('hidden'); $('auth-form').querySelector('label:nth-of-type(1)').classList.add('hidden'); $('auth-form').querySelector('label:nth-of-type(2)').classList.add('hidden'); $('auth-form').querySelector('.primary-button').classList.add('hidden'); $('auth-toggle').classList.add('hidden'); $('forgot-password').classList.add('hidden'); };
