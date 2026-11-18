@@ -92,6 +92,13 @@ async function loadStats() {
   const stats = await response.json();
   const findingTotal = stats.findings.low + stats.findings.medium + stats.findings.high + stats.findings.critical;
   $('stats-grid').innerHTML = `<div class="stat-card"><span>Files</span><strong>${stats.file_count}</strong></div><div class="stat-card"><span>Reviews</span><strong>${stats.reviews.total}</strong></div><div class="stat-card"><span>Findings</span><strong>${findingTotal}</strong></div>`;
+  renderBars('review-chart', [['Completed', stats.reviews.completed], ['Queued', stats.reviews.queued], ['Failed', stats.reviews.failed]]);
+  renderBars('finding-chart', [['Critical', stats.findings.critical], ['High', stats.findings.high], ['Medium', stats.findings.medium], ['Low', stats.findings.low]]);
+}
+
+function renderBars(elementId, entries) {
+  const total = Math.max(...entries.map((entry) => entry[1]), 1);
+  $(elementId).innerHTML = entries.map(([label, value]) => `<div class="bar-row"><span>${label}</span><div class="bar-track"><i style="width: ${(value / total) * 100}%"></i></div><strong>${value}</strong></div>`).join('');
 }
 
 async function loadReviewHistory() {

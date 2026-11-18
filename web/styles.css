@@ -109,6 +109,14 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .stat-card { background: #f7f9f5; border-radius: 9px; padding: 12px; }
 .stat-card span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
 .stat-card strong { display: block; font-size: 22px; margin-top: 6px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.chart-card { padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fbfcf9; }
+.bar-chart { display: grid; gap: 9px; margin-top: 13px; }
+.bar-row { display: grid; grid-template-columns: 58px 1fr 18px; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); }
+.bar-row strong { color: var(--ink); font-size: 11px; text-align: right; }
+.bar-track { height: 7px; overflow: hidden; border-radius: 99px; background: #e9eee8; }
+.bar-track i { display: block; height: 100%; border-radius: inherit; background: var(--accent-deep); }
+.chart-card:nth-child(2) .bar-track i { background: #d38a68; }
 .finding { padding: 15px; border-left: 4px solid var(--accent-deep); background: #f8faf6; border-radius: 8px; }
 .finding.high, .finding.critical { border-color: var(--danger); }
 .finding-title { font-weight: 800; font-size: 13px; }
@@ -117,5 +125,5 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .source-context { margin-top: 10px; overflow: auto; background: #202c2d; color: #d7e7d5; border-radius: 7px; padding: 9px; font: 11px/1.5 monospace; white-space: pre; }
 .toast { position: fixed; right: 30px; bottom: 30px; padding: 13px 16px; border-radius: 9px; background: #202c2d; color: white; display: none; font-size: 13px; }
 .hidden { display: none !important; }
-@media (max-width: 900px) { .sidebar { width: 210px; } .main-content { padding: 28px 24px; } .auth-panel, .workspace-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .sidebar { width: 210px; } .main-content { padding: 28px 24px; } .auth-panel, .workspace-grid, .charts-grid { grid-template-columns: 1fr; } }
 @media (max-width: 650px) { .shell { display: block; } .sidebar { width: 100%; padding: 17px; } .brand { margin-bottom: 20px; } .project-list { display: flex; overflow: auto; } .project-item { white-space: nowrap; } .sidebar-footer { margin-top: 20px; } .topbar { display: block; } .account-area { margin-top: 15px; } }
