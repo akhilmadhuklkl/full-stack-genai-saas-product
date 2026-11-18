@@ -59,8 +59,9 @@ process-local safeguard; a distributed limiter should be used for multi-instance
 ### 4. File storage and limits
 
 Source content is stored directly in the relational database. Production should define
-retention, deletion, encryption, larger-project storage, archive decompression limits, and
-possibly object storage for uploaded archives.
+retention, deletion, encryption, larger-project storage, archive decompression limits,
+backup/restore procedures, and possibly object storage for uploaded archives. Expired
+revoked-token cleanup and input-size limits are implemented locally.
 
 ### 5. AI reliability and safety
 

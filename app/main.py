@@ -202,8 +202,15 @@ def _auth_response(user_id: int) -> AuthResponse:
     )
 
 
+def _purge_expired_revocations(database: Session) -> None:
+    database.query(RevokedToken).filter(
+        RevokedToken.expires_at <= datetime.utcnow()
+    ).delete(synchronize_session=False)
+
+
 @app.post("/api/v1/auth/refresh", response_model=AuthResponse, tags=["auth"])
 def refresh_token(request: RefreshRequest, database: Session = Depends(get_db)) -> AuthResponse:
+    _purge_expired_revocations(database)
     claims = get_token_claims(request.refresh_token, expected_type="refresh")
     revoked = (
         database.query(RevokedToken)
@@ -228,6 +235,7 @@ def logout(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     database: Session = Depends(get_db),
 ) -> Response:
+    _purge_expired_revocations(database)
     claims = get_token_claims(credentials.credentials)
     if claims is not None:
         database.add(

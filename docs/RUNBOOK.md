@@ -97,6 +97,17 @@ alembic current
 Never edit an already-applied migration. Create a new revision for schema changes and test
 both upgrade and downgrade behavior where practical.
 
+## Data retention and backups
+
+Expired revoked-token records are cleaned up during refresh and logout operations. Review
+source files and findings remain stored until the owning project is deleted; define a formal
+retention period before handling customer data.
+
+For a local SQLite backup, stop write activity and copy the database file, or use SQLite’s
+backup tooling. For PostgreSQL, schedule regular logical or managed backups and test a
+restore periodically. Backups must receive the same access controls as production data and
+must not be committed to the repository.
+
 ## Health and logs
 
 - `GET /health` is a lightweight liveness check.
