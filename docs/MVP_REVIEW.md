@@ -29,6 +29,9 @@ background jobs, migrations, evaluation fixtures, CI, and security checks are pr
 - Usage tracking and rate limiting
 - Redis-compatible cache and limiter fallback
 - Health checks and request IDs
+- Queue health, worker heartbeats, stale-job recovery, and metrics
+- Expiring, rotating, and revocable tokens with cookie/CSRF browser protection
+- Login abuse throttling, security headers, and prompt-injection boundaries
 - Evaluation fixtures and comparison reports
 - Alembic migrations
 - CI lint, test, migration, and security steps
@@ -45,24 +48,25 @@ Python environment and confirm the GitHub Actions job is green.
 
 The project now supports a Redis-backed RQ queue and a separate worker process. Without
 `REDIS_URL`, it intentionally falls back to an in-process worker for local development.
-Production still needs worker deployment, queue monitoring, and operational alerting. Retry
-behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
+Production still needs worker deployment and external operational alerting. Queue health,
+worker heartbeats, stale-job recovery, retry behavior, and local recovery procedures are
+implemented or documented in `docs/RUNBOOK.md`.
 
 ### 3. Authentication hardening
 
 Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default), and refresh
 tokens plus persistent access-token revocation and refresh-token rotation are implemented.
 Production authentication now supports an HttpOnly browser cookie in addition to bearer
-headers. The frontend should prefer the cookie path in production. It still needs
-and email verification/reset flows. Login abuse throttling is implemented as a
-Redis-backed when `REDIS_URL` is configured, with a process-local fallback for development.
+headers, CSRF protection, token rotation, and revocation. Password reset and email
+verification still require an email provider. Login abuse throttling is Redis-backed when
+`REDIS_URL` is configured, with a process-local fallback for development.
 
 ### 4. File storage and limits
 
-Source content is stored directly in the relational database. Production should define
-retention, deletion, encryption, larger-project storage, archive decompression limits,
-backup/restore procedures, and possibly object storage for uploaded archives. Expired
-revoked-token cleanup and input-size limits are implemented locally.
+Source content is stored directly in the relational database. Production still needs formal
+retention, deletion, encryption, backup/restore, and larger-project storage policies.
+Archive decompression limits, input-size limits, and expired revoked-token cleanup are
+implemented locally.
 
 ### 5. AI reliability and safety
 
@@ -77,17 +81,17 @@ webhooks are not implemented. Billing remains intentionally deferred.
 
 ### 7. Production infrastructure
 
-Deployment, TLS, domain configuration, managed PostgreSQL, Redis, secrets management,
-backups, monitoring, alerting, and autoscaling are not implemented yet.
+Deployment, TLS, domain configuration, managed PostgreSQL/Redis, secret-manager integration,
+external backups, monitoring, alerting, and autoscaling remain deferred.
 
 ## Recommended pre-deployment sequence
 
 1. Resolve the local SQLAlchemy runtime issue and verify CI is green, including migration
    downgrade/upgrade checks.
-2. Review stronger integration tests around background jobs and archive security.
-3. Add token expiry and production authentication flows.
-4. Add production database/file retention policies.
-5. Add monitoring and alerting.
+2. Review stronger integration tests around background jobs, cookie auth, and archive security.
+3. Select an email provider and implement password reset/email verification if required.
+4. Define production database/file retention and backup policies.
+5. Connect `/metrics` and `/health/details` to external monitoring when deployment begins.
 6. Decide on billing scope.
 7. Begin deployment planning only after these checks pass.
 
