@@ -454,7 +454,11 @@ def logout(
 @app.get("/api/v1/me", response_model=AccountResponse, tags=["account"])
 def get_account(current_user: User = Depends(get_current_user)) -> AccountResponse:
     """Return basic information for the authenticated user."""
-    return AccountResponse(id=current_user.id, email=current_user.email)
+    return AccountResponse(
+        id=current_user.id,
+        email=current_user.email,
+        email_verified=current_user.email_verified,
+    )
 
 
 @app.post("/api/v1/me/password", status_code=204, tags=["account"])

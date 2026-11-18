@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 class AccountResponse(BaseModel):
     id: int
     email: str
+    email_verified: bool
 
 
 class PasswordChangeRequest(BaseModel):

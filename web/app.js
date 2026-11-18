@@ -47,6 +47,8 @@ async function loadHealth() {
 async function loadAccount() {
   const account = await (await api('/api/v1/me')).json();
   $('account-email').textContent = account.email;
+  $('verification-status').textContent = account.email_verified ? 'Email verified' : 'Email not verified — check your inbox.';
+  $('verification-status').className = `verification-status ${account.email_verified ? 'verified' : 'unverified'}`;
   const usage = await (await api('/api/v1/me/usage')).json();
   $('usage-summary').textContent = `${usage.review_count} of ${usage.limit} reviews used in the current hour.`;
 }
