@@ -63,6 +63,12 @@ def main() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
         "model": service.model,
         "prompt_version": settings.prompt_version,
+        "aggregate_score": (
+            sum(result.get("score", 0.0) for result in results)
+            / len(results)
+            if results
+            else 0.0
+        ),
         "results": results,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

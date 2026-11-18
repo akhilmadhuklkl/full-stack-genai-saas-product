@@ -20,3 +20,9 @@ python evals/run_evals.py --case sql_injection --max-cases 1
 ```
 
 Reports are written to `evals/results/latest.json`, which is intentionally ignored by Git.
+
+Compare two reports with:
+
+```powershell
+python evals/compare_reports.py evals/results/baseline.json evals/results/candidate.json
+```
