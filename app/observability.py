@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 logger = logging.getLogger("forge_review")
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 
 
 class RequestLoggingMiddleware:
@@ -21,7 +23,14 @@ class RequestLoggingMiddleware:
             await self.app(scope, receive, send)
             return
 
-        request_id = str(uuid4())
+        incoming_request_id = dict(scope.get("headers", [])).get(b"x-request-id", b"").decode(
+            "ascii", errors="ignore"
+        )
+        request_id = (
+            incoming_request_id
+            if REQUEST_ID_PATTERN.fullmatch(incoming_request_id)
+            else str(uuid4())
+        )
         scope.setdefault("state", {})["request_id"] = request_id
         start = time.perf_counter()
         status_code = 500
