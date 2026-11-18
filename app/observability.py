@@ -1,5 +1,6 @@
 import logging
 import re
+import secrets
 import time
 from uuid import uuid4
 
@@ -88,6 +89,43 @@ class SecurityHeadersMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_security_headers)
+
+
+class CSRFMiddleware:
+    """Protect cookie-authenticated state changes with a double-submit token."""
+
+    protected_methods = {"POST", "PUT", "PATCH", "DELETE"}
+    exempt_prefixes = ("/api/v1/auth/", "/health", "/metrics", "/docs", "/redoc", "/openapi.json")
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope.get("method") not in self.protected_methods:
+            await self.app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+        if path.startswith(self.exempt_prefixes):
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope.get("headers", []))
+        cookies = {
+            item.split("=", 1)[0].strip(): item.split("=", 1)[1].strip()
+            for item in headers.get(b"cookie", b"").decode("ascii", errors="ignore").split("; ")
+            if "=" in item
+        }
+        access_cookie = cookies.get("forge_access_token")
+        csrf_cookie = cookies.get("forge_csrf_token")
+        csrf_header = headers.get(b"x-csrf-token", b"").decode("ascii", errors="ignore")
+        csrf_invalid = not csrf_cookie or not csrf_header or not secrets.compare_digest(
+            csrf_cookie, csrf_header
+        )
+        if access_cookie and csrf_invalid:
+            from starlette.responses import PlainTextResponse
+
+            await PlainTextResponse("CSRF validation failed", status_code=403)(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
 
 
 def validation_error_handler(_: Request, exception: RequestValidationError) -> JSONResponse:

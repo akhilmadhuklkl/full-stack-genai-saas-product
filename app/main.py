@@ -1,5 +1,6 @@
 import json
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -32,6 +33,7 @@ from app.db.session import SessionLocal, create_tables, engine, get_db
 from app.dependencies import get_current_user
 from app.limits import login_attempt_limiter, review_rate_limiter
 from app.observability import (
+    CSRFMiddleware,
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
     unhandled_error_handler,
@@ -89,6 +91,7 @@ app = FastAPI(
 )
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_error_handler)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -262,6 +265,15 @@ def _set_access_cookie(response: Response, access_token: str) -> None:
         key="forge_access_token",
         value=access_token,
         httponly=True,
+        secure=settings.app_env == "production",
+        samesite="lax",
+        max_age=settings.auth_token_ttl_seconds,
+        path="/",
+    )
+    response.set_cookie(
+        key="forge_csrf_token",
+        value=secrets.token_urlsafe(24),
+        httponly=False,
         secure=settings.app_env == "production",
         samesite="lax",
         max_age=settings.auth_token_ttl_seconds,

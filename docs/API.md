@@ -13,7 +13,9 @@ Authorization: Bearer <access_token>
 ```
 
 Browser clients may use the `HttpOnly` `forge_access_token` cookie set during registration
-or login. API clients can continue using the bearer-token header.
+or login. Browser state-changing requests must also send the readable `forge_csrf_token`
+cookie value in the `X-CSRF-Token` header. API clients can continue using the bearer-token
+header.
 
 ## Authentication and account
 

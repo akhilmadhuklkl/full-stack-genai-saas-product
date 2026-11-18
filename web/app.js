@@ -2,7 +2,8 @@ const state = { authenticated: false, projects: [], selectedProject: null, files
 const $ = (id) => document.getElementById(id);
 
 function api(path, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const csrf = document.cookie.split('; ').find((item) => item.startsWith('forge_csrf_token='))?.split('=')[1];
+  const headers = { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': decodeURIComponent(csrf) } : {}), ...(options.headers || {}) };
   return fetch(path, { ...options, headers, credentials: 'include' });
 }
 
