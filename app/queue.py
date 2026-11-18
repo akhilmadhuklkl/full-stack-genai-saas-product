@@ -2,7 +2,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from redis import Redis
-from rq import Queue
+from rq import Queue, Retry
 
 from app.config import settings
 from app.jobs import process_review
@@ -28,5 +28,22 @@ def enqueue_review(review_id: int):
     """Enqueue a review durably, or use the local fallback in development."""
     queue = get_review_queue()
     if queue is not None:
-        return queue.enqueue(process_review, review_id, job_timeout=900, result_ttl=86400)
-    return fallback_executor.submit(process_review, review_id)
+        job = queue.enqueue(
+            process_review,
+            review_id,
+            job_timeout=900,
+            result_ttl=86400,
+            retry=Retry(max=2, interval=[10, 30]),
+        )
+        logger.info("review_enqueued review_id=%s queue_job_id=%s", review_id, job.id)
+        return job
+    future = fallback_executor.submit(process_review, review_id)
+    future.add_done_callback(_log_fallback_failure)
+    logger.info("review_enqueued_local_fallback review_id=%s", review_id)
+    return future
+
+
+def _log_fallback_failure(future) -> None:
+    error = future.exception()
+    if error is not None:
+        logger.error("review_fallback_failed error=%s", error, exc_info=error)

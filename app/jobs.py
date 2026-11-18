@@ -6,6 +6,8 @@ from app.db.models import Review, ReviewFinding, ReviewJob
 from app.db.session import SessionLocal
 
 logger = logging.getLogger("forge_review.jobs")
+
+
 def process_review(review_id: int) -> None:
     review_service = OllamaReviewService()
     database = SessionLocal()
@@ -49,6 +51,7 @@ def process_review(review_id: int) -> None:
         job.error_message = str(error)
         job.completed_at = datetime.utcnow()
         database.commit()
+        raise
     except Exception:
         logger.exception("job_failed review_id=%s", review_id)
         review.status = "failed"
@@ -56,5 +59,6 @@ def process_review(review_id: int) -> None:
         job.error_message = "Unexpected review worker failure"
         job.completed_at = datetime.utcnow()
         database.commit()
+        raise
     finally:
         database.close()
