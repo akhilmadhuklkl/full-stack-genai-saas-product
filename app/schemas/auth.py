@@ -23,5 +23,10 @@ class LoginRequest(RegisterRequest):
 
 class AuthResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user_id: int
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=20)

@@ -18,6 +18,15 @@ class User(Base):
     usage_records: Mapped[list["UsageRecord"]] = relationship(back_populates="user")
 
 
+class RevokedToken(Base):
+    __tablename__ = "revoked_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+
 class Project(Base):
     __tablename__ = "projects"
 

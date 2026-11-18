@@ -4,9 +4,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from app.db.models import RevokedToken, User
 from app.db.session import get_db
-from app.security import get_user_id_from_token
+from app.security import get_token_claims, token_hash
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -23,7 +23,13 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user_id = get_user_id_from_token(credentials.credentials)
+    claims = get_token_claims(credentials.credentials)
+    is_revoked = (
+        database.query(RevokedToken)
+        .filter(RevokedToken.token_hash == token_hash(credentials.credentials))
+        .first()
+    )
+    user_id = None if claims is None or is_revoked is not None else claims.user_id
     user = database.get(User, user_id) if user_id is not None else None
     if user is None:
         raise HTTPException(

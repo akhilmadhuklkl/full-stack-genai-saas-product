@@ -8,6 +8,7 @@ import httpx
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,7 +18,16 @@ from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.archive import ArchiveSecurityError, extract_safe_text_files
 from app.cache import cache
 from app.config import settings
-from app.db.models import Project, ProjectFile, Review, ReviewFinding, ReviewJob, UsageRecord, User
+from app.db.models import (
+    Project,
+    ProjectFile,
+    Review,
+    ReviewFinding,
+    ReviewJob,
+    RevokedToken,
+    UsageRecord,
+    User,
+)
 from app.db.session import create_tables, engine, get_db
 from app.dependencies import get_current_user
 from app.limits import review_rate_limiter
@@ -29,7 +39,7 @@ from app.observability import (
 from app.queue import enqueue_review
 from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
-from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
 from app.schemas.health import HealthComponent, HealthResponse
 from app.schemas.job import JobResponse
@@ -47,7 +57,14 @@ from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRe
 from app.schemas.stats import FindingStatsResponse, ProjectStatsResponse, ReviewStatsResponse
 from app.schemas.usage import UsageResponse
 from app.schemas.version import VersionResponse
-from app.security import create_access_token, hash_password, verify_password
+from app.security import (
+    create_access_token,
+    create_refresh_token,
+    get_token_claims,
+    hash_password,
+    token_hash,
+    verify_password,
+)
 
 review_service = OllamaReviewService()
 
@@ -136,7 +153,7 @@ def register(request: RegisterRequest, database: Session = Depends(get_db)) -> A
     database.add(user)
     database.commit()
     database.refresh(user)
-    return AuthResponse(access_token=create_access_token(user.id), user_id=user.id)
+    return _auth_response(user.id)
 
 
 @app.post("/api/v1/auth/login", response_model=AuthResponse, tags=["auth"])
@@ -150,7 +167,46 @@ def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthRes
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return AuthResponse(access_token=create_access_token(user.id), user_id=user.id)
+    return _auth_response(user.id)
+
+
+def _auth_response(user_id: int) -> AuthResponse:
+    return AuthResponse(
+        access_token=create_access_token(user_id),
+        refresh_token=create_refresh_token(user_id),
+        user_id=user_id,
+    )
+
+
+@app.post("/api/v1/auth/refresh", response_model=AuthResponse, tags=["auth"])
+def refresh_token(request: RefreshRequest, database: Session = Depends(get_db)) -> AuthResponse:
+    claims = get_token_claims(request.refresh_token, expected_type="refresh")
+    revoked = (
+        database.query(RevokedToken)
+        .filter(RevokedToken.token_hash == token_hash(request.refresh_token))
+        .first()
+    )
+    user = database.get(User, claims.user_id) if claims is not None and revoked is None else None
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    return _auth_response(user.id)
+
+
+@app.post("/api/v1/auth/logout", status_code=204, tags=["auth"])
+def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    database: Session = Depends(get_db),
+) -> Response:
+    claims = get_token_claims(credentials.credentials)
+    if claims is not None:
+        database.add(
+            RevokedToken(
+                token_hash=token_hash(credentials.credentials),
+                expires_at=datetime.utcfromtimestamp(claims.expires_at),
+            )
+        )
+        database.commit()
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/me", response_model=AccountResponse, tags=["account"])

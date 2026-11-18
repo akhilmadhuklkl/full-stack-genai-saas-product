@@ -18,6 +18,8 @@ Authorization: Bearer <access_token>
 |---|---|---|
 | POST | `/api/v1/auth/register` | Create an account |
 | POST | `/api/v1/auth/login` | Sign in and receive a token |
+| POST | `/api/v1/auth/refresh` | Exchange a refresh token for new credentials |
+| POST | `/api/v1/auth/logout` | Revoke the current access token |
 | GET | `/api/v1/me` | Read the current account |
 | POST | `/api/v1/me/password` | Change the current password |
 | GET | `/api/v1/me/usage` | Read hourly review usage |

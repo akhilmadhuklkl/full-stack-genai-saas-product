@@ -14,6 +14,7 @@ class Settings:
     redis_url: str | None
     prompt_version: str
     auth_token_ttl_seconds: int
+    auth_refresh_token_ttl_seconds: int
 
 
 def load_settings() -> Settings:
@@ -27,6 +28,7 @@ def load_settings() -> Settings:
         redis_url=os.getenv("REDIS_URL") or None,
         prompt_version=os.getenv("PROMPT_VERSION", "v1"),
         auth_token_ttl_seconds=int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "3600")),
+        auth_refresh_token_ttl_seconds=int(os.getenv("AUTH_REFRESH_TOKEN_TTL_SECONDS", "2592000")),
     )
 
 
