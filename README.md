@@ -132,3 +132,13 @@ python evals/run_evals.py --case sql_injection --max-cases 1
 5. Start a local AI review.
 6. Poll the background job status.
 7. Inspect findings, source context, history, and statistics.
+
+### One-command local startup
+
+On Windows, after installing Ollama and `uv`, run this from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
+```
+
+The script starts Ollama when needed, downloads `llama3.2:3b` if it is missing, and starts Forge Review at `http://127.0.0.1:8001`.
