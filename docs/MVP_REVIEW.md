@@ -63,8 +63,9 @@ possibly object storage for uploaded archives.
 
 ### 5. AI reliability and safety
 
-The system needs model timeout/cancellation tests, prompt-injection cases, stronger output
-validation, maximum context/token controls, and an explicit policy for untrusted source files.
+The system now has configurable model timeouts, stronger output validation, and explicit
+prompt-injection boundaries for untrusted source files. Production still needs cancellation
+tests, maximum context/token controls, and broader adversarial evaluation coverage.
 
 ### 6. Billing and subscriptions
 
