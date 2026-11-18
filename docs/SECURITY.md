@@ -20,6 +20,8 @@ code until the controls below are reviewed for the target environment.
 Rotate `AUTH_SECRET` immediately if it is exposed. Rotation invalidates existing signed
 tokens, which is the intended emergency behavior. Redis and database credentials must be
 stored in the environment or a secret manager and must never be committed.
+When `APP_ENV=production`, startup rejects the default or shorter-than-32-character
+`AUTH_SECRET` and rejects an empty `CORS_ORIGINS` setting.
 
 After rotation:
 

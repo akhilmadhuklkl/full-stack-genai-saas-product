@@ -22,7 +22,7 @@ class Settings:
 
 def load_settings() -> Settings:
     app_env = os.getenv("APP_ENV", "development").lower()
-    return Settings(
+    settings = Settings(
         app_env=app_env,
         database_url=os.getenv("DATABASE_URL", "sqlite:///./genai_reviewer.db"),
         auth_secret=os.getenv("AUTH_SECRET", "local-development-secret"),
@@ -40,6 +40,12 @@ def load_settings() -> Settings:
             if origin.strip()
         ),
     )
+    if settings.app_env == "production":
+        if len(settings.auth_secret) < 32 or settings.auth_secret == "local-development-secret":
+            raise RuntimeError("Production requires a strong AUTH_SECRET of at least 32 characters")
+        if not settings.cors_origins:
+            raise RuntimeError("Production requires at least one CORS_ORIGINS entry")
+    return settings
 
 
 settings = load_settings()
