@@ -109,6 +109,7 @@ class CSRFMiddleware:
             await self.app(scope, receive, send)
             return
         headers = dict(scope.get("headers", []))
+        authorization = headers.get(b"authorization", b"").decode("ascii", errors="ignore")
         cookies = {
             item.split("=", 1)[0].strip(): item.split("=", 1)[1].strip()
             for item in headers.get(b"cookie", b"").decode("ascii", errors="ignore").split("; ")
@@ -120,7 +121,8 @@ class CSRFMiddleware:
         csrf_invalid = not csrf_cookie or not csrf_header or not secrets.compare_digest(
             csrf_cookie, csrf_header
         )
-        if access_cookie and csrf_invalid:
+        uses_bearer_auth = authorization.lower().startswith("bearer ")
+        if access_cookie and not uses_bearer_auth and csrf_invalid:
             from starlette.responses import PlainTextResponse
 
             await PlainTextResponse("CSRF validation failed", status_code=403)(scope, receive, send)

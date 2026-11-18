@@ -1,18 +1,11 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-client = TestClient(app)
-
-
-def test_health_check() -> None:
+def test_health_check(client) -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_create_review_returns_queued_review() -> None:
+def test_create_review_returns_queued_review(client) -> None:
     auth = client.post(
         "/api/v1/auth/register",
         json={"email": "test@example.com", "password": "StrongPass123"},
@@ -33,7 +26,7 @@ def test_create_review_returns_queued_review() -> None:
     assert body["message"] == "Review accepted for 1 file(s)."
 
 
-def test_create_review_rejects_empty_file_list() -> None:
+def test_create_review_rejects_empty_file_list(client) -> None:
     auth = client.post(
         "/api/v1/auth/register",
         json={"email": "empty@example.com", "password": "StrongPass123"},
@@ -47,7 +40,7 @@ def test_create_review_rejects_empty_file_list() -> None:
     assert response.status_code == 422
 
 
-def test_missing_project_returns_not_found() -> None:
+def test_missing_project_returns_not_found(client) -> None:
     auth = client.post(
         "/api/v1/auth/register",
         json={"email": "missing@example.com", "password": "StrongPass123"},
@@ -60,19 +53,19 @@ def test_missing_project_returns_not_found() -> None:
     assert response.status_code == 404
 
 
-def test_projects_require_authentication() -> None:
+def test_projects_require_authentication(client) -> None:
     response = client.get("/api/v1/projects")
 
     assert response.status_code == 401
 
 
-def test_project_creation_requires_authentication() -> None:
+def test_project_creation_requires_authentication(client) -> None:
     response = client.post("/api/v1/projects", json={"name": "demo"})
 
     assert response.status_code == 401
 
 
-def test_file_creation_requires_authentication() -> None:
+def test_file_creation_requires_authentication(client) -> None:
     response = client.post(
         "/api/v1/projects/1/files",
         json={"path": "app.py", "content": "print('hello')"},
@@ -81,7 +74,7 @@ def test_file_creation_requires_authentication() -> None:
     assert response.status_code == 401
 
 
-def test_review_status_update_requires_authentication() -> None:
+def test_review_status_update_requires_authentication(client) -> None:
     response = client.patch(
         "/api/v1/reviews/1/status",
         json={"status": "processing"},
@@ -98,7 +91,7 @@ def test_validation_errors_use_safe_stable_shape(client) -> None:
 
     assert response.status_code == 422
     assert response.json()["error"] == "validation_error"
-    assert "password" in response.json()["fields"]
+    assert "body.password" in response.json()["fields"]
 
 
 def test_usage_requires_authentication(client) -> None:

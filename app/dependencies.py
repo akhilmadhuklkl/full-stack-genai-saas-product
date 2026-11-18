@@ -14,7 +14,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     database: Annotated[Session, Depends(get_db)],
-    access_token: Annotated[str | None, Cookie()] = None,
+    access_token: Annotated[str | None, Cookie(alias="forge_access_token")] = None,
 ) -> User:
     """Resolve the authenticated user from a signed bearer token."""
     token = credentials.credentials if credentials is not None else access_token

@@ -11,7 +11,17 @@ def test_database_schema_contains_core_tables() -> None:
 
     table_names = set(inspect(engine).get_table_names())
 
-    assert table_names == {"users", "projects", "project_files", "reviews", "review_findings"}
+    assert table_names == {
+        "users",
+        "projects",
+        "project_files",
+        "reviews",
+        "review_findings",
+        "review_jobs",
+        "usage_records",
+        "revoked_tokens",
+        "email_tokens",
+    }
 
 
 def test_review_relationships_store_project_context_and_findings() -> None:

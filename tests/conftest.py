@@ -36,7 +36,7 @@ def client():
 @pytest.fixture()
 def fake_review_service(monkeypatch):
     class FakeReviewService:
-        def review(self, project_name, files):
+        def review(self, project_name, files, prompt_version=None, review_instructions=None):
             from app.ai.ollama import ReviewFindingResult, ReviewResult
 
             return ReviewResult(
