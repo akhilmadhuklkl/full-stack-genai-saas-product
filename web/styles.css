@@ -79,6 +79,8 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .stream-output { min-height: 170px; max-height: 280px; overflow: auto; padding: 18px; background: #202c2d; color: #e3f2db; border-radius: 12px; font-family: monospace; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
 .empty-state { color: #9ba9a1; font-size: 13px; padding: 15px 0; }
 .findings { display: grid; gap: 10px; margin-top: 16px; }
+.findings-toolbar { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
+.findings-toolbar select { border: 1px solid var(--line); border-radius: 8px; padding: 7px; color: var(--muted); background: white; font-size: 11px; }
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
 .stat-card { background: #f7f9f5; border-radius: 9px; padding: 12px; }
 .stat-card span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
@@ -88,6 +90,7 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .finding-title { font-weight: 800; font-size: 13px; }
 .finding-meta { font-family: monospace; color: var(--muted); font-size: 11px; margin: 5px 0; }
 .finding p { color: #596763; font-size: 12px; line-height: 1.5; margin: 5px 0 0; }
+.source-context { margin-top: 10px; overflow: auto; background: #202c2d; color: #d7e7d5; border-radius: 7px; padding: 9px; font: 11px/1.5 monospace; white-space: pre; }
 .toast { position: fixed; right: 30px; bottom: 30px; padding: 13px 16px; border-radius: 9px; background: #202c2d; color: white; display: none; font-size: 13px; }
 .hidden { display: none !important; }
 @media (max-width: 900px) { .sidebar { width: 210px; } .main-content { padding: 28px 24px; } .auth-panel, .workspace-grid { grid-template-columns: 1fr; } }

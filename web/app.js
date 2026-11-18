@@ -1,4 +1,4 @@
-const state = { token: localStorage.getItem('forge_token'), projects: [], selectedProject: null, files: [] };
+const state = { token: localStorage.getItem('forge_token'), projects: [], selectedProject: null, files: [], currentReviewId: null };
 const $ = (id) => document.getElementById(id);
 
 function api(path, options = {}) {
@@ -17,6 +17,10 @@ function toast(message) {
   $('toast').textContent = message;
   $('toast').style.display = 'block';
   setTimeout(() => { $('toast').style.display = 'none'; }, 2800);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 }
 
 function renderAuth() {
@@ -135,10 +139,22 @@ async function pollJob(jobId, reviewId) {
 }
 
 async function showReview(id) {
-  const response = await api(`/api/v1/reviews/${id}`);
+  state.currentReviewId = id;
+  const severity = $('severity-filter').value;
+  const response = await api(`/api/v1/reviews/${id}${severity ? `?severity=${encodeURIComponent(severity)}` : ''}`);
   if (!response.ok) return;
   const review = await response.json();
-  $('findings').innerHTML = review.findings.map((finding) => `<article class="finding ${finding.severity}"><div class="finding-title">${finding.title}</div><div class="finding-meta">${finding.severity.toUpperCase()} · ${finding.file_path}${finding.line_number ? `:${finding.line_number}` : ''}</div><p>${finding.explanation}</p><p><strong>Recommendation:</strong> ${finding.recommendation}</p></article>`).join('') || '<div class="empty-state">No findings detected.</div>';
+  $('findings').innerHTML = review.findings.map((finding) => `<article class="finding ${escapeHtml(finding.severity)}"><div class="finding-title">${escapeHtml(finding.title)}</div><div class="finding-meta">${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.file_path)}${finding.line_number ? `:${finding.line_number}` : ''}</div><p>${escapeHtml(finding.explanation)}</p><p><strong>Recommendation:</strong> ${escapeHtml(finding.recommendation)}</p>${sourceContext(finding)}</article>`).join('') || '<div class="empty-state">No findings detected.</div>';
+}
+
+function sourceContext(finding) {
+  if (!finding.line_number) return '';
+  const file = state.files.find((item) => item.path === finding.file_path);
+  if (!file || !file.content) return '';
+  const lines = file.content.split('\n');
+  const start = Math.max(0, finding.line_number - 3);
+  const end = Math.min(lines.length, finding.line_number + 2);
+  return `<pre class="source-context">${lines.slice(start, end).map((line, index) => `${String(start + index + 1).padStart(4, ' ')}  ${escapeHtml(line)}`).join('\n')}</pre>`;
 }
 
 $('auth-form').onsubmit = async (event) => {
@@ -156,6 +172,7 @@ $('archive-form').onsubmit = async (event) => { event.preventDefault(); if (!sta
 $('run-review').onclick = runReview;
 $('file-search').oninput = renderFiles;
 $('review-status-filter').onchange = loadReviewHistory;
+$('severity-filter').onchange = () => { if (state.currentReviewId) showReview(state.currentReviewId); };
 
 renderAuth();
 if (state.token) loadProjects().catch(() => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); });
