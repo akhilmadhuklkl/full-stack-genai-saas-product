@@ -84,6 +84,18 @@
               </div>
             </section>
           </div>
+          <section id="account-panel" class="panel account-panel hidden">
+            <div class="section-heading"><div><span class="eyebrow">Account</span><h2>Your account</h2></div><button id="close-account" class="text-button" type="button">Close</button></div>
+            <p id="account-email" class="muted"></p>
+            <div id="usage-summary" class="usage-summary"></div>
+            <form id="password-form" class="password-form">
+              <h3>Change password</h3>
+              <label>Current password<input id="current-password" type="password" required /></label>
+              <label>New password<input id="new-password" type="password" minlength="8" required /></label>
+              <button class="secondary-button" type="submit">Update password</button>
+              <div id="password-status" class="muted"></div>
+            </form>
+          </section>
         </section>
         <div id="toast" class="toast"></div>
       </main>

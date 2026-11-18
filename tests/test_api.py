@@ -171,6 +171,12 @@ def test_users_cannot_read_each_others_projects(client) -> None:
     assert response.status_code == 404
 
 
+def test_account_requires_authentication(client) -> None:
+    response = client.get("/api/v1/me")
+
+    assert response.status_code == 401
+
+
 def test_project_stats_requires_authentication(client) -> None:
     response = client.get("/api/v1/projects/1/stats")
 

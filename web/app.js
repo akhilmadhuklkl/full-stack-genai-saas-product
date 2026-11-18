@@ -26,8 +26,16 @@ function escapeHtml(value) {
 function renderAuth() {
   $('auth-panel').classList.toggle('hidden', Boolean(state.token));
   $('workspace').classList.toggle('hidden', !state.token);
-  $('account-area').innerHTML = state.token ? '<button class="text-button" id="logout">Sign out</button>' : '';
+  $('account-area').innerHTML = state.token ? '<button class="text-button" id="account-button">Account</button><button class="text-button" id="logout">Sign out</button>' : '';
   if ($('logout')) $('logout').onclick = () => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); };
+  if ($('account-button')) $('account-button').onclick = () => { $('account-panel').classList.remove('hidden'); loadAccount(); };
+}
+
+async function loadAccount() {
+  const account = await (await api('/api/v1/me')).json();
+  $('account-email').textContent = account.email;
+  const usage = await (await api('/api/v1/me/usage')).json();
+  $('usage-summary').textContent = `${usage.review_count} of ${usage.limit} reviews used in the current hour.`;
 }
 
 async function loadProjects() {
@@ -172,6 +180,8 @@ $('new-project').onclick = createProject;
 $('file-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const response = await api(`/api/v1/projects/${state.selectedProject.id}/files`, { method: 'POST', body: JSON.stringify({ path: $('file-path').value, content: $('file-content').value }) }); if (response.ok) { $('file-path').value = ''; $('file-content').value = ''; await selectProject(state.selectedProject.id); toast('File added'); } else toast('Could not add file'); };
 $('archive-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const input = $('archive-input'); if (!input.files.length) return toast('Choose a ZIP archive first'); $('archive-status').textContent = 'Importing archive…'; const formData = new FormData(); formData.append('archive', input.files[0]); const response = await uploadApi(`/api/v1/projects/${state.selectedProject.id}/archive`, formData); if (!response.ok) { $('archive-status').textContent = 'Import failed'; return toast('Could not import archive'); } const result = await response.json(); $('archive-status').textContent = `${result.imported_files} imported · ${result.skipped_files} skipped`; input.value = ''; await selectProject(state.selectedProject.id); toast('Archive imported'); };
 $('run-review').onclick = runReview;
+$('close-account').onclick = () => $('account-panel').classList.add('hidden');
+$('password-form').onsubmit = async (event) => { event.preventDefault(); const response = await api('/api/v1/me/password', { method: 'POST', body: JSON.stringify({ current_password: $('current-password').value, new_password: $('new-password').value }) }); if (!response.ok) { $('password-status').textContent = (await response.json()).detail || 'Could not update password'; return; } $('password-status').textContent = 'Password updated'; $('password-form').reset(); };
 $('settings-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return; const response = await api(`/api/v1/projects/${state.selectedProject.id}`, { method: 'PATCH', body: JSON.stringify({ name: $('settings-name').value, review_instructions: $('settings-instructions').value || null }) }); if (!response.ok) { $('settings-status').textContent = 'Could not save settings'; return; } $('settings-status').textContent = 'Settings saved'; await loadProjects(); await selectProject(state.selectedProject.id); toast('Settings saved'); };
 $('delete-project').onclick = async () => { if (!state.selectedProject || !confirm(`Delete ${state.selectedProject.name}?`)) return; const response = await api(`/api/v1/projects/${state.selectedProject.id}`, { method: 'DELETE' }); if (!response.ok) return toast('Could not delete project'); state.selectedProject = null; await loadProjects(); $('page-title').textContent = 'Welcome to Forge Review'; $('project-name').textContent = 'Select a project'; $('file-list').innerHTML = '<div class="empty-state">Create or select a project to begin.</div>'; toast('Project deleted'); };
 $('file-search').oninput = renderFiles;

@@ -26,6 +26,7 @@ from app.observability import (
     unhandled_error_handler,
     validation_error_handler,
 )
+from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
@@ -103,6 +104,28 @@ def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthRes
             headers={"WWW-Authenticate": "Bearer"},
         )
     return AuthResponse(access_token=create_access_token(user.id), user_id=user.id)
+
+
+@app.get("/api/v1/me", response_model=AccountResponse, tags=["account"])
+def get_account(current_user: User = Depends(get_current_user)) -> AccountResponse:
+    """Return basic information for the authenticated user."""
+    return AccountResponse(id=current_user.id, email=current_user.email)
+
+
+@app.post("/api/v1/me/password", status_code=204, tags=["account"])
+def change_password(
+    request: PasswordChangeRequest,
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Change the authenticated user's password."""
+    if not verify_password(request.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if request.current_password == request.new_password:
+        raise HTTPException(status_code=400, detail="New password must be different")
+    current_user.password_hash = hash_password(request.new_password)
+    database.commit()
+    return Response(status_code=204)
 
 
 @app.post("/api/v1/reviews", response_model=ReviewResponse, status_code=202, tags=["reviews"])
