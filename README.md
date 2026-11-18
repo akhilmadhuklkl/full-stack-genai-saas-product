@@ -22,16 +22,47 @@ Milestone 1: backend foundation and the first code-review API contract.
 
 ## Local setup
 
-Requirements: Python 3.11+.
+Requirements:
+
+- Python 3.11+
+- Ollama
+- A local Ollama model, such as `llama3.2:3b`
+
+Create and activate a virtual environment:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
+```
+
+Start Ollama and verify a model is available:
+
+```powershell
+ollama serve
+ollama list
+ollama pull llama3.2:3b
+```
+
+Prepare local configuration by copying `.env.development.example` to `.env` and
+adjusting values if needed. Never commit `.env`.
+
+Apply database migrations and start the API/UI:
+
+```powershell
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for the interactive API documentation.
+Open the application at http://127.0.0.1:8000.
+
+Interactive API documentation is available at:
+
+- http://127.0.0.1:8000/docs — Swagger UI
+- http://127.0.0.1:8000/redoc — ReDoc
+- http://127.0.0.1:8000/openapi.json — OpenAPI schema
+
+See [docs/API.md](docs/API.md) for the route overview.
 
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.
@@ -64,3 +95,19 @@ pytest
 
 The test suite uses an isolated in-memory SQLite database and a deterministic fake AI
 reviewer. It does not call Ollama or modify the local development database.
+
+Run the bounded AI evaluation runner with:
+
+```powershell
+python evals/run_evals.py --case sql_injection --max-cases 1
+```
+
+## Main workflow
+
+1. Register or sign in.
+2. Create a project.
+3. Add files manually or upload a ZIP archive.
+4. Optionally add project-specific review instructions.
+5. Start a local AI review.
+6. Poll the background job status.
+7. Inspect findings, source context, history, and statistics.
