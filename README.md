@@ -65,6 +65,7 @@ Interactive API documentation is available at:
 - http://127.0.0.1:8000/openapi.json — OpenAPI schema
 
 See [docs/API.md](docs/API.md) for the route overview.
+See [docs/MVP_REVIEW.md](docs/MVP_REVIEW.md) for the current readiness assessment and remaining gaps.
 
 GitHub Actions runs compilation, linting, migration setup, frontend syntax validation,
 tests, Bandit security scanning, dependency auditing, and secret-pattern checks on pushes
