@@ -269,12 +269,16 @@ def _token_digest(token: str) -> str:
 
 def _send_email_token(database: Session, user: User, purpose: str) -> None:
     raw_token = secrets.token_urlsafe(32)
-    expires_at = utcnow() + timedelta(hours=24 if purpose == "verify_email" else 1)
+    now = utcnow()
+    expires_at = now + timedelta(hours=24 if purpose == "verify_email" else 1)
+    database.query(EmailToken).filter(
+        (EmailToken.expires_at <= now) | (EmailToken.used_at.is_not(None))
+    ).delete(synchronize_session=False)
     database.query(EmailToken).filter(
         EmailToken.user_id == user.id,
         EmailToken.purpose == purpose,
         EmailToken.used_at.is_(None),
-    ).update({EmailToken.used_at: utcnow()}, synchronize_session=False)
+    ).update({EmailToken.used_at: now}, synchronize_session=False)
     database.add(
         EmailToken(
             user_id=user.id,

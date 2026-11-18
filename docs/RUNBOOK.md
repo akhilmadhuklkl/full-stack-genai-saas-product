@@ -116,6 +116,8 @@ both upgrade and downgrade behavior where practical.
 Expired revoked-token records are cleaned up during refresh and logout operations. Review
 source files and findings remain stored until the owning project is deleted; define a formal
 retention period before handling customer data.
+Expired and consumed verification/reset tokens are cleaned up when a new email action is
+requested.
 
 For a local SQLite backup, stop write activity and copy the database file, or use SQLite’s
 backup tooling. For PostgreSQL, schedule regular logical or managed backups and test a
