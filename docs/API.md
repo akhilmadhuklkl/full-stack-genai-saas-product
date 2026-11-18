@@ -46,10 +46,12 @@ Authorization: Bearer <access_token>
 | POST | `/api/v1/reviews` | Create a queued review |
 | GET | `/api/v1/projects/{project_id}/reviews` | List review history |
 | GET | `/api/v1/reviews/{review_id}` | Read findings and summary |
+| GET | `/api/v1/reviews/{review_id}/export` | Download JSON or Markdown results |
 | GET | `/api/v1/reviews/{review_id}/stream` | Stream review events using SSE |
 | POST | `/api/v1/reviews/{review_id}/run` | Run synchronously |
 | POST | `/api/v1/reviews/{review_id}/enqueue` | Run asynchronously |
 | GET | `/api/v1/jobs/{job_id}` | Read background-job status |
+| POST | `/api/v1/reviews/{review_id}/retry` | Retry a failed review |
 | PATCH | `/api/v1/reviews/{review_id}/status` | Update review state |
 | POST | `/api/v1/reviews/{review_id}/findings` | Add a structured finding |
 
@@ -67,5 +69,6 @@ Examples:
 ```text
 GET /api/v1/projects/1/files?search=auth
 GET /api/v1/projects/1/reviews?status=completed
+GET /api/v1/projects/1/reviews?search=security&page=1&page_size=10
 GET /api/v1/reviews/3?severity=high
 ```
