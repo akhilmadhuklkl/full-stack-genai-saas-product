@@ -75,6 +75,7 @@ Interactive API documentation is available at:
 
 See [docs/API.md](docs/API.md) for the route overview.
 See [docs/MVP_REVIEW.md](docs/MVP_REVIEW.md) for the current readiness assessment and remaining gaps.
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for local operations and troubleshooting.
 
 GitHub Actions runs compilation, linting, migration setup, frontend syntax validation,
 tests with JUnit reporting, Bandit security scanning, dependency auditing, and
