@@ -177,6 +177,13 @@ def test_account_requires_authentication(client) -> None:
     assert response.status_code == 401
 
 
+def test_basic_health_endpoint_is_public(client) -> None:
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_project_stats_requires_authentication(client) -> None:
     response = client.get("/api/v1/projects/1/stats")
 

@@ -31,6 +31,19 @@ function renderAuth() {
   if ($('account-button')) $('account-button').onclick = () => { $('account-panel').classList.remove('hidden'); loadAccount(); };
 }
 
+async function loadHealth() {
+  try {
+    const response = await fetch('/health/details');
+    const health = await response.json();
+    const ollama = health.components.ollama.status;
+    $('health-label').textContent = ollama === 'ok' ? 'Local AI online' : 'AI service unavailable';
+    $('health-dot').style.background = ollama === 'ok' ? 'var(--accent)' : '#e99a65';
+  } catch (error) {
+    $('health-label').textContent = 'System status unavailable';
+    $('health-dot').style.background = '#e99a65';
+  }
+}
+
 async function loadAccount() {
   const account = await (await api('/api/v1/me')).json();
   $('account-email').textContent = account.email;
@@ -189,4 +202,5 @@ $('review-status-filter').onchange = loadReviewHistory;
 $('severity-filter').onchange = () => { if (state.currentReviewId) showReview(state.currentReviewId); };
 
 renderAuth();
+loadHealth();
 if (state.token) loadProjects().catch(() => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); });

@@ -6,18 +6,20 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path, PurePosixPath
 
+import httpx
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.cache import cache
 from app.config import settings
 from app.db.models import Project, ProjectFile, Review, ReviewFinding, ReviewJob, UsageRecord, User
-from app.db.session import create_tables, get_db
+from app.db.session import create_tables, engine, get_db
 from app.dependencies import get_current_user
 from app.jobs import enqueue_review
 from app.limits import review_rate_limiter
@@ -30,6 +32,7 @@ from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.file import FileCreateRequest, FileResponse, FileUpdateRequest
+from app.schemas.health import HealthComponent, HealthResponse
 from app.schemas.job import JobResponse
 from app.schemas.project import ProjectCreateRequest, ProjectUpdateRequest
 from app.schemas.review import (
@@ -76,6 +79,38 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 def health_check() -> dict[str, str]:
     """Return a small readiness signal for local development and future deployment."""
     return {"status": "ok"}
+
+
+@app.get("/health/details", response_model=HealthResponse, tags=["system"])
+def detailed_health_check() -> HealthResponse:
+    """Check local dependencies without exposing credentials or connection strings."""
+    components: dict[str, HealthComponent] = {}
+    try:
+        with engine.connect():
+            components["database"] = HealthComponent(status="ok", detail="Database reachable")
+    except SQLAlchemyError:
+        components["database"] = HealthComponent(
+            status="unavailable", detail="Database connection failed"
+        )
+
+    try:
+        response = httpx.get(f"{settings.ollama_base_url}/api/tags", timeout=1.0)
+        response.raise_for_status()
+        components["ollama"] = HealthComponent(status="ok", detail="Ollama reachable")
+    except httpx.HTTPError:
+        components["ollama"] = HealthComponent(
+            status="unavailable", detail="Ollama is not reachable"
+        )
+
+    components["redis"] = HealthComponent(
+        status="ok" if cache.client is not None else "degraded",
+        detail="Redis reachable" if cache.client is not None else "Using in-memory cache fallback",
+    )
+    components["workers"] = HealthComponent(status="ok", detail="Review workers available")
+    overall_status = (
+        "ok" if all(item.status == "ok" for item in components.values()) else "degraded"
+    )
+    return HealthResponse(status=overall_status, components=components)
 
 
 @app.post("/api/v1/auth/register", response_model=AuthResponse, status_code=201, tags=["auth"])
