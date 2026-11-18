@@ -82,7 +82,8 @@ backups, monitoring, alerting, and autoscaling are not implemented yet.
 
 ## Recommended pre-deployment sequence
 
-1. Resolve the local SQLAlchemy runtime issue and verify CI is green.
+1. Resolve the local SQLAlchemy runtime issue and verify CI is green, including migration
+   downgrade/upgrade checks.
 2. Review stronger integration tests around background jobs and archive security.
 3. Add token expiry and production authentication flows.
 4. Add production database/file retention policies.

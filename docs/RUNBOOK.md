@@ -100,6 +100,10 @@ To inspect the current revision:
 alembic current
 ```
 
+CI also verifies a clean downgrade to `base` followed by an upgrade to `head` using a
+temporary database. This catches migration ordering and downgrade mistakes before changes
+are merged.
+
 Never edit an already-applied migration. Create a new revision for schema changes and test
 both upgrade and downgrade behavior where practical.
 

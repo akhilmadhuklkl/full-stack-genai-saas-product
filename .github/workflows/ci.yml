@@ -60,6 +60,11 @@ jobs:
       - name: Apply database migrations
         run: alembic upgrade head
 
+      - name: Verify migration downgrade and upgrade
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
       - name: Run tests
         run: python -m pytest -q --junitxml=test-results.xml
 
