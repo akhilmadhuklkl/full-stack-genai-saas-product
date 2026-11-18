@@ -24,6 +24,16 @@ def get_review_queue() -> Queue | None:
         return None
 
 
+def get_queue_health() -> tuple[str, str]:
+    """Return queue availability and a safe operational detail string."""
+    if not settings.redis_url:
+        return "degraded", "Redis is not configured; using local fallback worker"
+    queue = get_review_queue()
+    if queue is None:
+        return "unavailable", "Redis review queue is unreachable"
+    return "ok", f"Redis reachable; {len(queue)} review job(s) queued"
+
+
 def enqueue_review(review_id: int):
     """Enqueue a review durably, or use the local fallback in development."""
     queue = get_review_queue()

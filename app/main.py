@@ -36,7 +36,7 @@ from app.observability import (
     unhandled_error_handler,
     validation_error_handler,
 )
-from app.queue import enqueue_review
+from app.queue import enqueue_review, get_queue_health
 from app.schemas.account import AccountResponse, PasswordChangeRequest
 from app.schemas.archive import ArchiveUploadResponse
 from app.schemas.auth import AuthResponse, LoginRequest, RefreshRequest, RegisterRequest
@@ -131,11 +131,16 @@ def detailed_health_check() -> HealthResponse:
             status="unavailable", detail="Ollama is not reachable"
         )
 
-    components["redis"] = HealthComponent(
-        status="ok" if cache.client is not None else "degraded",
-        detail="Redis reachable" if cache.client is not None else "Using in-memory cache fallback",
+    queue_status, queue_detail = get_queue_health()
+    components["redis"] = HealthComponent(status=queue_status, detail=queue_detail)
+    components["workers"] = HealthComponent(
+        status="ok" if settings.redis_url else "degraded",
+        detail=(
+            "Durable RQ worker can be started with python -m app.worker"
+            if settings.redis_url
+            else "Using in-process fallback worker"
+        ),
     )
-    components["workers"] = HealthComponent(status="ok", detail="Review workers available")
     overall_status = (
         "ok" if all(item.status == "ok" for item in components.values()) else "degraded"
     )
