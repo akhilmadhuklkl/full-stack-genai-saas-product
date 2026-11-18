@@ -1,16 +1,14 @@
-const state = { token: localStorage.getItem('forge_token'), projects: [], selectedProject: null, files: [], currentReviewId: null, reviewPage: 1, reviewTotal: 0 };
+const state = { authenticated: false, projects: [], selectedProject: null, files: [], currentReviewId: null, reviewPage: 1, reviewTotal: 0 };
 const $ = (id) => document.getElementById(id);
 
 function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  return fetch(path, { ...options, headers });
+  return fetch(path, { ...options, headers, credentials: 'include' });
 }
 
 function uploadApi(path, formData) {
   const headers = {};
-  if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  return fetch(path, { method: 'POST', headers, body: formData });
+  return fetch(path, { method: 'POST', headers, body: formData, credentials: 'include' });
 }
 
 function toast(message) {
@@ -24,10 +22,10 @@ function escapeHtml(value) {
 }
 
 function renderAuth() {
-  $('auth-panel').classList.toggle('hidden', Boolean(state.token));
-  $('workspace').classList.toggle('hidden', !state.token);
-  $('account-area').innerHTML = state.token ? '<button class="text-button" id="account-button">Account</button><button class="text-button" id="logout">Sign out</button>' : '';
-  if ($('logout')) $('logout').onclick = () => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); };
+  $('auth-panel').classList.toggle('hidden', state.authenticated);
+  $('workspace').classList.toggle('hidden', !state.authenticated);
+  $('account-area').innerHTML = state.authenticated ? '<button class="text-button" id="account-button">Account</button><button class="text-button" id="logout">Sign out</button>' : '';
+  if ($('logout')) $('logout').onclick = async () => { await api('/api/v1/auth/logout', { method: 'POST' }); state.authenticated = false; renderAuth(); };
   if ($('account-button')) $('account-button').onclick = () => { $('account-panel').classList.remove('hidden'); loadAccount(); };
 }
 
@@ -247,7 +245,7 @@ $('auth-form').onsubmit = async (event) => {
   const mode = $('auth-title').dataset.mode || 'register';
   const response = await api(`/api/v1/auth/${mode}`, { method: 'POST', body: JSON.stringify({ email: $('auth-email').value, password: $('auth-password').value }) });
   if (!response.ok) { $('auth-error').textContent = (await response.json()).detail || 'Authentication failed'; return; }
-  state.token = (await response.json()).access_token; localStorage.setItem('forge_token', state.token); renderAuth(); loadProjects();
+  await response.json(); state.authenticated = true; renderAuth(); loadProjects();
 };
 
 $('auth-toggle').onclick = () => { const title = $('auth-title'); const register = title.dataset.mode !== 'login'; title.dataset.mode = register ? 'login' : 'register'; title.textContent = register ? 'Welcome back' : 'Create your workspace'; $('auth-toggle').textContent = register ? 'Need an account? Create one' : 'Already have an account? Sign in'; };
@@ -268,4 +266,9 @@ $('severity-filter').onchange = () => { if (state.currentReviewId) showReview(st
 
 renderAuth();
 loadHealth();
-if (state.token) loadProjects().catch(() => { localStorage.removeItem('forge_token'); state.token = null; renderAuth(); });
+api('/api/v1/me').then((response) => {
+  if (!response.ok) return;
+  state.authenticated = true;
+  renderAuth();
+  return loadProjects();
+}).catch(() => { state.authenticated = false; renderAuth(); });
