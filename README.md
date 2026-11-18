@@ -77,6 +77,7 @@ See [docs/API.md](docs/API.md) for the route overview.
 See [docs/MVP_REVIEW.md](docs/MVP_REVIEW.md) for the current readiness assessment and remaining gaps.
 See [docs/RUNBOOK.md](docs/RUNBOOK.md) for local operations and troubleshooting.
 See [docs/SECURITY.md](docs/SECURITY.md) for security controls and incident response.
+See [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for Resend and local email configuration.
 
 GitHub Actions runs compilation, linting, migration setup, frontend syntax validation,
 tests with JUnit and coverage reporting, Bandit security scanning, dependency auditing,
