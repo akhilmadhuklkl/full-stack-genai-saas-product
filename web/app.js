@@ -250,6 +250,9 @@ $('auth-form').onsubmit = async (event) => {
 };
 
 $('auth-toggle').onclick = () => { const title = $('auth-title'); const register = title.dataset.mode !== 'login'; title.dataset.mode = register ? 'login' : 'register'; title.textContent = register ? 'Welcome back' : 'Create your workspace'; $('auth-toggle').textContent = register ? 'Need an account? Create one' : 'Already have an account? Sign in'; };
+$('forgot-password').onclick = () => { $('reset-request-form').classList.remove('hidden'); $('auth-form').querySelector('label:nth-of-type(1)').classList.add('hidden'); $('auth-form').querySelector('label:nth-of-type(2)').classList.add('hidden'); $('auth-form').querySelector('.primary-button').classList.add('hidden'); $('auth-toggle').classList.add('hidden'); $('forgot-password').classList.add('hidden'); };
+$('reset-cancel').onclick = () => { $('reset-request-form').classList.add('hidden'); $('auth-form').querySelectorAll('label').forEach((label) => label.classList.remove('hidden')); $('auth-form').querySelector('.primary-button').classList.remove('hidden'); $('auth-toggle').classList.remove('hidden'); $('forgot-password').classList.remove('hidden'); };
+$('reset-submit').onclick = async () => { const response = await api('/api/v1/auth/password-reset/request', { method: 'POST', body: JSON.stringify({ email: $('reset-email').value }) }); $('reset-status').textContent = response.ok ? 'If the account exists, a reset email has been sent.' : 'Could not request a reset email.'; };
 $('new-project').onclick = createProject;
 $('file-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const response = await api(`/api/v1/projects/${state.selectedProject.id}/files`, { method: 'POST', body: JSON.stringify({ path: $('file-path').value, content: $('file-content').value }) }); if (response.ok) { $('file-path').value = ''; $('file-content').value = ''; await selectProject(state.selectedProject.id); toast('File added'); } else toast('Could not add file'); };
 $('archive-form').onsubmit = async (event) => { event.preventDefault(); if (!state.selectedProject) return toast('Select a project first'); const input = $('archive-input'); if (!input.files.length) return toast('Choose a ZIP archive first'); $('archive-status').textContent = 'Importing archive…'; const formData = new FormData(); formData.append('archive', input.files[0]); const response = await uploadApi(`/api/v1/projects/${state.selectedProject.id}/archive`, formData); if (!response.ok) { $('archive-status').textContent = 'Import failed'; return toast('Could not import archive'); } const result = await response.json(); $('archive-status').textContent = `${result.imported_files} imported · ${result.skipped_files} skipped`; input.value = ''; await selectProject(state.selectedProject.id); toast('Archive imported'); };
@@ -267,6 +270,10 @@ $('severity-filter').onchange = () => { if (state.currentReviewId) showReview(st
 
 renderAuth();
 loadHealth();
+const emailToken = new URLSearchParams(window.location.search).get('token');
+const emailAction = window.location.pathname.includes('reset-password') ? 'reset' : window.location.pathname.includes('verify-email') ? 'verify' : null;
+if (emailToken && emailAction === 'verify') { api('/api/v1/auth/verify-email/confirm', { method: 'POST', body: JSON.stringify({ token: emailToken }) }).then((response) => toast(response.ok ? 'Email verified' : 'Verification link is invalid or expired')); window.history.replaceState({}, '', '/'); }
+if (emailToken && emailAction === 'reset') { const password = prompt('Enter a new password (8+ characters, with uppercase, lowercase, and a number):'); if (password) api('/api/v1/auth/password-reset/confirm', { method: 'POST', body: JSON.stringify({ token: emailToken, password }) }).then((response) => toast(response.ok ? 'Password reset complete' : 'Reset link is invalid or expired')); window.history.replaceState({}, '', '/'); }
 api('/api/v1/me').then((response) => {
   if (!response.ok) return;
   state.authenticated = true;

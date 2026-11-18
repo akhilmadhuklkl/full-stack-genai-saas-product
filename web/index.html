@@ -37,6 +37,13 @@
             <label>Password<input id="auth-password" type="password" minlength="8" required placeholder="At least 8 characters" /></label>
             <button class="primary-button" type="submit">Continue</button>
             <button id="auth-toggle" class="text-button" type="button">Already have an account? Sign in</button>
+            <button id="forgot-password" class="text-button" type="button">Forgot your password?</button>
+            <div id="reset-request-form" class="reset-request-form hidden">
+              <label>Email for reset<input id="reset-email" type="email" required placeholder="you@example.com" /></label>
+              <button id="reset-submit" class="secondary-button" type="button">Send reset email</button>
+              <button id="reset-cancel" class="text-button" type="button">Back to sign in</button>
+              <div id="reset-status" class="muted"></div>
+            </div>
             <div id="auth-error" class="error-text"></div>
           </form>
         </section>
