@@ -6,6 +6,7 @@ import redis
 from fastapi import HTTPException, status
 
 from app.config import settings
+from app.time import utcnow
 
 
 class ReviewRateLimiter:
@@ -18,7 +19,7 @@ class ReviewRateLimiter:
         self.lock = Lock()
 
     def check_and_record(self, user_id: int) -> None:
-        now = datetime.utcnow()
+        now = utcnow()
         cutoff = now - self.window
         with self.lock:
             user_requests = self.requests[user_id]
@@ -63,7 +64,7 @@ class LoginAttemptLimiter:
                 return
             except redis.RedisError:
                 self.redis_client = None
-        now = datetime.utcnow()
+        now = utcnow()
         cutoff = now - self.window
         with self.lock:
             attempts = self.attempts[email]
@@ -87,7 +88,7 @@ class LoginAttemptLimiter:
             except redis.RedisError:
                 self.redis_client = None
         with self.lock:
-            self.attempts[email].append(datetime.utcnow())
+            self.attempts[email].append(utcnow())
 
     def reset(self, email: str) -> None:
         if self.redis_client is not None:

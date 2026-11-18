@@ -68,6 +68,7 @@ from app.security import (
     token_hash,
     verify_password,
 )
+from app.time import utcnow
 
 review_service = OllamaReviewService()
 
@@ -106,7 +107,7 @@ def health_check() -> dict[str, str]:
 @app.get("/metrics", tags=["system"])
 def metrics() -> PlainTextResponse:
     """Expose low-cardinality operational metrics for future monitoring."""
-    now = datetime.utcnow()
+    now = utcnow()
     stale_cutoff = now - timedelta(seconds=settings.job_stale_seconds)
     with SessionLocal() as database:
         review_counts = dict(
@@ -186,7 +187,7 @@ def detailed_health_check() -> HealthResponse:
     components["redis"] = HealthComponent(status=queue_status, detail=queue_detail)
     worker_status, worker_detail = get_worker_health()
     try:
-        stale_cutoff = datetime.utcnow() - timedelta(seconds=settings.job_stale_seconds)
+        stale_cutoff = utcnow() - timedelta(seconds=settings.job_stale_seconds)
         with SessionLocal() as database:
             stale_jobs = (
                 database.query(ReviewJob)
@@ -283,7 +284,7 @@ def _set_access_cookie(response: Response, access_token: str) -> None:
 
 def _purge_expired_revocations(database: Session) -> None:
     database.query(RevokedToken).filter(
-        RevokedToken.expires_at <= datetime.utcnow()
+        RevokedToken.expires_at <= utcnow()
     ).delete(synchronize_session=False)
 
 
@@ -403,7 +404,7 @@ def get_usage(
     database: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> UsageResponse:
     """Return the authenticated user's review usage for the current hour."""
-    period_end = datetime.utcnow()
+    period_end = utcnow()
     period_start = period_end - timedelta(hours=1)
     review_count = (
         database.query(UsageRecord)
@@ -531,7 +532,7 @@ def recover_stale_review(
     """Requeue an owned review only when its worker heartbeat is stale."""
     review = _get_owned_review(review_id, current_user, database)
     job = database.query(ReviewJob).filter(ReviewJob.review_id == review.id).one_or_none()
-    stale_cutoff = datetime.utcnow() - timedelta(seconds=settings.job_stale_seconds)
+    stale_cutoff = utcnow() - timedelta(seconds=settings.job_stale_seconds)
     if (
         job is None
         or review.status != "processing"

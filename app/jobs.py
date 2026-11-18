@@ -1,9 +1,9 @@
 import logging
-from datetime import datetime
 
 from app.ai.ollama import AIReviewError, OllamaReviewService
 from app.db.models import Review, ReviewFinding, ReviewJob
 from app.db.session import SessionLocal
+from app.time import utcnow
 
 logger = logging.getLogger("forge_review.jobs")
 
@@ -19,7 +19,7 @@ def process_review(review_id: int) -> None:
         return
 
     try:
-        now = datetime.utcnow()
+        now = utcnow()
         job.attempt_count += 1
         job.status = "processing"
         job.started_at = job.started_at or now
@@ -33,7 +33,7 @@ def process_review(review_id: int) -> None:
             review.prompt_version,
             review.project.review_instructions,
         )
-        job.heartbeat_at = datetime.utcnow()
+        job.heartbeat_at = utcnow()
         for finding in result.findings:
             review.findings.append(
                 ReviewFinding(
@@ -48,14 +48,14 @@ def process_review(review_id: int) -> None:
         review.summary = result.summary
         review.status = "completed"
         job.status = "completed"
-        job.heartbeat_at = datetime.utcnow()
-        job.completed_at = datetime.utcnow()
+        job.heartbeat_at = utcnow()
+        job.completed_at = utcnow()
         database.commit()
     except AIReviewError as error:
         review.status = "failed"
         job.status = "failed"
         job.error_message = str(error)
-        job.completed_at = datetime.utcnow()
+        job.completed_at = utcnow()
         database.commit()
         raise
     except Exception:
@@ -63,7 +63,7 @@ def process_review(review_id: int) -> None:
         review.status = "failed"
         job.status = "failed"
         job.error_message = "Unexpected review worker failure"
-        job.completed_at = datetime.utcnow()
+        job.completed_at = utcnow()
         database.commit()
         raise
     finally:

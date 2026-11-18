@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
+from app.time import utcnow
 
 
 class User(Base):
@@ -12,7 +13,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(256))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     projects: Mapped[list["Project"]] = relationship(back_populates="owner")
     usage_records: Mapped[list["UsageRecord"]] = relationship(back_populates="user")
@@ -24,7 +25,7 @@ class RevokedToken(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     expires_at: Mapped[datetime]
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 class Project(Base):
@@ -34,7 +35,7 @@ class Project(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
     review_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="projects")
     files: Mapped[list["ProjectFile"]] = relationship(
@@ -53,7 +54,7 @@ class ProjectFile(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
     path: Mapped[str] = mapped_column(String(500))
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     project: Mapped[Project] = relationship(back_populates="files")
 
@@ -66,7 +67,7 @@ class Review(Base):
     status: Mapped[str] = mapped_column(String(20), default="queued")
     prompt_version: Mapped[str] = mapped_column(String(20), default="v1")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     project: Mapped[Project] = relationship(back_populates="reviews")
     findings: Mapped[list["ReviewFinding"]] = relationship(
@@ -96,7 +97,7 @@ class UsageRecord(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     usage_type: Mapped[str] = mapped_column(String(50))
     units: Mapped[int] = mapped_column(default=1)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     user: Mapped[User] = relationship(back_populates="usage_records")
 
@@ -109,7 +110,7 @@ class ReviewJob(Base):
     status: Mapped[str] = mapped_column(String(20), default="queued")
     attempt_count: Mapped[int] = mapped_column(default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     heartbeat_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
