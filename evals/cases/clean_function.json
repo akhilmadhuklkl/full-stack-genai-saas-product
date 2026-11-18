@@ -1,0 +1,11 @@
+{
+  "name": "clean-small-function",
+  "description": "Avoid inventing a finding for a simple safe function.",
+  "files": [
+    {
+      "path": "math_utils.py",
+      "content": "def add(left: int, right: int) -> int:\n    return left + right\n"
+    }
+  ],
+  "expected_findings": []
+}

@@ -1,0 +1,17 @@
+{
+  "name": "sql-injection-query",
+  "description": "Detect string interpolation in a database query.",
+  "files": [
+    {
+      "path": "users.py",
+      "content": "def find_user(db, username):\n    query = f\"SELECT * FROM users WHERE name = '{username}'\"\n    return db.execute(query)\n"
+    }
+  ],
+  "expected_findings": [
+    {
+      "file_path": "users.py",
+      "severity": "high",
+      "title_contains": "sql"
+    }
+  ]
+}
