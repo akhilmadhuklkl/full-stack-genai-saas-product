@@ -19,7 +19,11 @@ def process_review(review_id: int) -> None:
         return
 
     try:
+        now = datetime.utcnow()
+        job.attempt_count += 1
         job.status = "processing"
+        job.started_at = job.started_at or now
+        job.heartbeat_at = now
         review.status = "processing"
         database.commit()
         files = [(project_file.path, project_file.content) for project_file in review.project.files]
@@ -29,6 +33,7 @@ def process_review(review_id: int) -> None:
             review.prompt_version,
             review.project.review_instructions,
         )
+        job.heartbeat_at = datetime.utcnow()
         for finding in result.findings:
             review.findings.append(
                 ReviewFinding(
@@ -43,6 +48,7 @@ def process_review(review_id: int) -> None:
         review.summary = result.summary
         review.status = "completed"
         job.status = "completed"
+        job.heartbeat_at = datetime.utcnow()
         job.completed_at = datetime.utcnow()
         database.commit()
     except AIReviewError as error:

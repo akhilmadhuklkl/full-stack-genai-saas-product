@@ -273,8 +273,11 @@ def enqueue_review_job(
         id=job.id,
         review_id=job.review_id,
         status=job.status,
+        attempt_count=job.attempt_count,
         error_message=job.error_message,
         created_at=job.created_at,
+        started_at=job.started_at,
+        heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
     )
 
@@ -299,8 +302,11 @@ def get_job(
         id=job.id,
         review_id=job.review_id,
         status=job.status,
+        attempt_count=job.attempt_count,
         error_message=job.error_message,
         created_at=job.created_at,
+        started_at=job.started_at,
+        heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
     )
 

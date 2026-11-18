@@ -98,8 +98,11 @@ class ReviewJob(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), unique=True, index=True)
     status: Mapped[str] = mapped_column(String(20), default="queued")
+    attempt_count: Mapped[int] = mapped_column(default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     review: Mapped[Review] = relationship()
