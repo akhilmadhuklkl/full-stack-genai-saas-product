@@ -184,6 +184,13 @@ def test_basic_health_endpoint_is_public(client) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_version_endpoint_is_public(client) -> None:
+    response = client.get("/api/v1/version")
+
+    assert response.status_code == 200
+    assert response.json()["version"] == "0.1.0"
+
+
 def test_project_stats_requires_authentication(client) -> None:
     response = client.get("/api/v1/projects/1/stats")
 

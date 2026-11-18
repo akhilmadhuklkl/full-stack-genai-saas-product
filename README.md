@@ -2,6 +2,8 @@
 
 An AI-powered SaaS application with authentication, dashboards, APIs, streaming responses, usage limits, and an agent service.
 
+Current version: `0.1.0` — see [CHANGELOG.md](CHANGELOG.md).
+
 ## Project goal
 
 Build a production-style AI application such as a code reviewer, research assistant, sales assistant, or support bot. The first implementation will focus on a small, complete vertical slice before adding advanced agent tools, retrieval, billing, and background jobs.

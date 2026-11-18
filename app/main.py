@@ -47,6 +47,7 @@ from app.schemas.review import (
 from app.schemas.review_result import FindingCreateRequest, ReviewStatusUpdateRequest
 from app.schemas.stats import FindingStatsResponse, ProjectStatsResponse, ReviewStatsResponse
 from app.schemas.usage import UsageResponse
+from app.schemas.version import VersionResponse
 from app.security import create_access_token, hash_password, verify_password
 
 review_service = OllamaReviewService()
@@ -79,6 +80,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 def health_check() -> dict[str, str]:
     """Return a small readiness signal for local development and future deployment."""
     return {"status": "ok"}
+
+
+@app.get("/api/v1/version", response_model=VersionResponse, tags=["system"])
+def version_info() -> VersionResponse:
+    """Return application and active prompt versions."""
+    from app.version import __version__
+
+    return VersionResponse(
+        name="forge-review",
+        version=__version__,
+        prompt_version=settings.prompt_version,
+    )
 
 
 @app.get("/health/details", response_model=HealthResponse, tags=["system"])
