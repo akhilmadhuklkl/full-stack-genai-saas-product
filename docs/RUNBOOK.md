@@ -126,6 +126,7 @@ must not be committed to the repository.
 
 - `GET /health` is a lightweight liveness check.
 - `GET /health/details` checks the database, Ollama, Redis, and worker availability.
+- The same endpoint reports whether email delivery is configured for console or Resend mode.
 - `GET /metrics` exposes review, queue, and stale-job gauges for future monitoring.
 - Every HTTP response includes `X-Request-ID`.
 - HTTP responses include browser security headers such as `X-Content-Type-Options`,

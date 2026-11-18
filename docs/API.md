@@ -72,7 +72,7 @@ header.
 | Method | Route | Purpose |
 |---|---|---|
 | GET | `/health` | Lightweight liveness check |
-| GET | `/health/details` | Database, Ollama, Redis, and worker status |
+| GET | `/health/details` | Database, Ollama, Redis, email, and worker status |
 | GET | `/metrics` | Prometheus-compatible operational metrics |
 
 ## Filtering

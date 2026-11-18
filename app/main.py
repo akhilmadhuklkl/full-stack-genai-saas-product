@@ -205,6 +205,18 @@ def detailed_health_check() -> HealthResponse:
 
     queue_status, queue_detail = get_queue_health()
     components["redis"] = HealthComponent(status=queue_status, detail=queue_detail)
+    if settings.email_provider == "resend" and settings.resend_api_key:
+        components["email"] = HealthComponent(
+            status="ok", detail="Resend email delivery configured"
+        )
+    elif settings.email_provider == "console" and settings.app_env != "production":
+        components["email"] = HealthComponent(
+            status="degraded", detail="Using local console email adapter"
+        )
+    else:
+        components["email"] = HealthComponent(
+            status="unavailable", detail="Email delivery is not configured"
+        )
     worker_status, worker_detail = get_worker_health()
     try:
         stale_cutoff = utcnow() - timedelta(seconds=settings.job_stale_seconds)
