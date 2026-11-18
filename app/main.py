@@ -30,7 +30,7 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, create_tables, engine, get_db
 from app.dependencies import get_current_user
-from app.limits import review_rate_limiter
+from app.limits import login_attempt_limiter, review_rate_limiter
 from app.observability import (
     RequestLoggingMiddleware,
     unhandled_error_handler,
@@ -181,13 +181,16 @@ def register(request: RegisterRequest, database: Session = Depends(get_db)) -> A
 def login(request: LoginRequest, database: Session = Depends(get_db)) -> AuthResponse:
     """Authenticate a user and return its access token."""
     email = request.email.strip().lower()
+    login_attempt_limiter.check(email)
     user = database.query(User).filter(User.email == email).one_or_none()
     if user is None or not verify_password(request.password, user.password_hash):
+        login_attempt_limiter.record_failure(email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    login_attempt_limiter.reset(email)
     return _auth_response(user.id)
 
 

@@ -53,7 +53,8 @@ behavior and local recovery procedures are documented in `docs/RUNBOOK.md`.
 Bearer tokens now expire using `AUTH_TOKEN_TTL_SECONDS` (one hour by default), and refresh
 tokens plus persistent access-token revocation and refresh-token rotation are implemented.
 Production authentication still needs secure browser storage,
-account lockout or abuse controls, and email verification/reset flows.
+and email verification/reset flows. Login abuse throttling is implemented as a
+process-local safeguard; a distributed limiter should be used for multi-instance production.
 
 ### 4. File storage and limits
 

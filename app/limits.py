@@ -33,6 +33,38 @@ class ReviewRateLimiter:
             user_requests.append(now)
 
 
+class LoginAttemptLimiter:
+    """Process-local limiter for repeated failed login attempts."""
+
+    def __init__(self, max_attempts: int = 5, window_minutes: int = 15):
+        self.max_attempts = max_attempts
+        self.window = timedelta(minutes=window_minutes)
+        self.attempts: dict[str, deque[datetime]] = defaultdict(deque)
+        self.lock = Lock()
+
+    def check(self, email: str) -> None:
+        now = datetime.utcnow()
+        cutoff = now - self.window
+        with self.lock:
+            attempts = self.attempts[email]
+            while attempts and attempts[0] <= cutoff:
+                attempts.popleft()
+            if len(attempts) >= self.max_attempts:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many failed login attempts. Try again later.",
+                    headers={"Retry-After": str(int(self.window.total_seconds()))},
+                )
+
+    def record_failure(self, email: str) -> None:
+        with self.lock:
+            self.attempts[email].append(datetime.utcnow())
+
+    def reset(self, email: str) -> None:
+        with self.lock:
+            self.attempts.pop(email, None)
+
+
 class RedisReviewRateLimiter(ReviewRateLimiter):
     """Distributed limiter using Redis, with the local limiter as fallback."""
 
@@ -67,3 +99,4 @@ class RedisReviewRateLimiter(ReviewRateLimiter):
 
 
 review_rate_limiter = RedisReviewRateLimiter(settings.redis_url)
+login_attempt_limiter = LoginAttemptLimiter()
