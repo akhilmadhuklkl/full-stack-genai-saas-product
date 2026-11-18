@@ -705,6 +705,12 @@ def list_reviews(
     reviews = project.reviews
     if review_status:
         reviews = [review for review in reviews if review.status == review_status]
+    jobs = {
+        job.review_id: job
+        for job in database.query(ReviewJob)
+        .filter(ReviewJob.review_id.in_([review.id for review in reviews]))
+        .all()
+    }
     return [
         ReviewSummaryResponse(
             id=review.id,
@@ -712,6 +718,11 @@ def list_reviews(
             status=review.status,
             summary=review.summary,
             prompt_version=review.prompt_version,
+            job_status=jobs[review.id].status if review.id in jobs else None,
+            attempt_count=jobs[review.id].attempt_count if review.id in jobs else None,
+            started_at=jobs[review.id].started_at if review.id in jobs else None,
+            heartbeat_at=jobs[review.id].heartbeat_at if review.id in jobs else None,
+            completed_at=jobs[review.id].completed_at if review.id in jobs else None,
         )
         for review in reviews
     ]

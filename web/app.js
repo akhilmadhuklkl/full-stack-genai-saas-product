@@ -100,7 +100,12 @@ async function loadReviewHistory() {
   const response = await api(`/api/v1/projects/${state.selectedProject.id}/reviews${filter ? `?status=${encodeURIComponent(filter)}` : ''}`);
   if (!response.ok) { $('review-history').innerHTML = '<div class="error-text">Could not load review history.</div>'; return; }
   const reviews = await response.json();
-  $('review-history').innerHTML = reviews.length ? reviews.slice().reverse().map((review) => `<button data-review-id="${review.id}"><span>Review #${review.id}</span><small>${review.status}</small></button>`).join('') : '<div class="empty-state">No review runs yet.</div>';
+  $('review-history').innerHTML = reviews.length ? reviews.slice().reverse().map((review) => {
+    const status = review.job_status || review.status;
+    const attempt = review.attempt_count ? ` · attempt ${review.attempt_count}` : '';
+    const timing = review.completed_at ? ` · finished ${new Date(review.completed_at).toLocaleTimeString()}` : '';
+    return `<button data-review-id="${review.id}"><span><strong>Review #${review.id}</strong><small>${escapeHtml(review.prompt_version)}${attempt}${timing}</small></span><em class="history-status ${escapeHtml(status)}">${escapeHtml(status)}</em></button>`;
+  }).join('') : '<div class="empty-state">No review runs yet.</div>';
   document.querySelectorAll('[data-review-id]').forEach((button) => { button.onclick = () => showReview(Number(button.dataset.reviewId)); });
 }
 

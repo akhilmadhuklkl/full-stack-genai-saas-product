@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Literal
 
@@ -56,6 +57,11 @@ class ReviewSummaryResponse(BaseModel):
     status: Literal["queued", "processing", "completed", "failed"]
     summary: str | None
     prompt_version: str
+    job_status: Literal["queued", "processing", "completed", "failed"] | None = None
+    attempt_count: int | None = None
+    started_at: datetime | None = None
+    heartbeat_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class ReviewDetailResponse(ReviewSummaryResponse):
