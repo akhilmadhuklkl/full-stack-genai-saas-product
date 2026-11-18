@@ -55,6 +55,7 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .secondary-button { background: var(--blue); color: #27456a; }
 .text-button { border: 0; background: transparent; color: var(--muted); font-size: 12px; margin-top: 13px; }
 .error-text { color: var(--danger); font-size: 12px; min-height: 18px; margin-top: 12px; }
+.loading-state { color: var(--muted); font-size: 12px; padding: 15px 0; }
 .workspace-grid { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(400px, 1.2fr); gap: 22px; }
 .project-panel, .review-panel { padding: 25px; min-height: 600px; }
 .section-heading { display: flex; justify-content: space-between; gap: 15px; align-items: flex-start; margin-bottom: 22px; }

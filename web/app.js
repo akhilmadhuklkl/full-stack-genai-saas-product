@@ -53,8 +53,9 @@ async function loadAccount() {
 }
 
 async function loadProjects() {
+  $('project-list').innerHTML = '<div class="loading-state">Loading projects…</div>';
   const response = await api('/api/v1/projects');
-  if (!response.ok) throw new Error('Could not load projects');
+  if (!response.ok) { $('project-list').innerHTML = '<div class="error-text">Could not load projects.</div>'; throw new Error('Could not load projects'); }
   state.projects = await response.json();
   $('project-list').innerHTML = state.projects.length
     ? state.projects.map((project) => `<button class="project-item ${state.selectedProject?.id === project.id ? 'active' : ''}" data-id="${project.id}">${project.name}</button>`).join('')
@@ -87,8 +88,10 @@ async function selectProject(id) {
 
 async function loadStats() {
   if (!state.selectedProject) return;
+  $('review-chart').innerHTML = '<div class="loading-state">Loading metrics…</div>';
+  $('finding-chart').innerHTML = '';
   const response = await api(`/api/v1/projects/${state.selectedProject.id}/stats`);
-  if (!response.ok) return;
+  if (!response.ok) { $('review-chart').innerHTML = '<div class="error-text">Metrics unavailable.</div>'; $('finding-chart').innerHTML = ''; return; }
   const stats = await response.json();
   const findingTotal = stats.findings.low + stats.findings.medium + stats.findings.high + stats.findings.critical;
   $('stats-grid').innerHTML = `<div class="stat-card"><span>Files</span><strong>${stats.file_count}</strong></div><div class="stat-card"><span>Reviews</span><strong>${stats.reviews.total}</strong></div><div class="stat-card"><span>Findings</span><strong>${findingTotal}</strong></div>`;
@@ -103,6 +106,7 @@ function renderBars(elementId, entries) {
 
 async function loadReviewHistory() {
   if (!state.selectedProject) return;
+  $('review-history').innerHTML = '<div class="loading-state">Loading review history…</div>';
   const filter = $('review-status-filter').value;
   const search = $('review-search').value.trim();
   const params = new URLSearchParams({ page: state.reviewPage, page_size: 8 });
