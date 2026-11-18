@@ -82,6 +82,7 @@ GitHub Actions runs compilation, linting, migration setup, frontend syntax valid
 tests with JUnit and coverage reporting, Bandit security scanning, dependency auditing,
 and secret-pattern checks on pushes and pull requests targeting `main`. Test results and
 coverage reports are uploaded as workflow artifacts when the CI job finishes.
+The workflow can also be started manually from the GitHub Actions tab using **Run workflow**.
 
 The local database defaults to SQLite at `./genai_reviewer.db`. Set `DATABASE_URL`
 to a PostgreSQL connection string when using PostgreSQL.

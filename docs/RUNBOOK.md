@@ -104,6 +104,10 @@ CI also verifies a clean downgrade to `base` followed by an upgrade to `head` us
 temporary database. This catches migration ordering and downgrade mistakes before changes
 are merged.
 
+To run the complete verification manually, open the repository’s GitHub Actions tab, select
+the `CI` workflow, and choose **Run workflow** on the `main` branch. Review the pytest and
+coverage artifacts after the run completes.
+
 Never edit an already-applied migration. Create a new revision for schema changes and test
 both upgrade and downgrade behavior where practical.
 
