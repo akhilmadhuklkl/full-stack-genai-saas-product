@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -761,6 +761,88 @@ def list_reviews(
         )
         for review in reviews
     ]
+
+
+@app.get("/api/v1/reviews/{review_id}/export", tags=["reviews"])
+def export_review(
+    review_id: int,
+    export_format: str = Query(default="json", alias="format"),
+    database: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Download an owned review as JSON or Markdown."""
+    review = (
+        database.query(Review)
+        .join(Project)
+        .filter(Review.id == review_id, Project.owner_id == current_user.id)
+        .one_or_none()
+    )
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if export_format not in {"json", "markdown"}:
+        raise HTTPException(status_code=400, detail="Format must be json or markdown")
+
+    findings = [
+        {
+            "severity": finding.severity,
+            "file_path": finding.file_path,
+            "line_number": finding.line_number,
+            "title": finding.title,
+            "explanation": finding.explanation,
+            "recommendation": finding.recommendation,
+        }
+        for finding in review.findings
+    ]
+    if export_format == "json":
+        payload = {
+            "review_id": review.id,
+            "project_id": review.project_id,
+            "status": review.status,
+            "prompt_version": review.prompt_version,
+            "summary": review.summary,
+            "findings": findings,
+        }
+        return Response(
+            content=json.dumps(payload, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="review-{review.id}.json"'},
+        )
+
+    lines = [
+        f"# Forge Review #{review.id}",
+        "",
+        f"- **Status:** {review.status}",
+        f"- **Prompt version:** {review.prompt_version}",
+        "",
+        "## Summary",
+        "",
+        review.summary or "No summary was generated.",
+        "",
+        "## Findings",
+        "",
+    ]
+    for finding in findings:
+        location = (
+            f"{finding['file_path']}:{finding['line_number']}"
+            if finding["line_number"]
+            else finding["file_path"]
+        )
+        lines.extend(
+            [
+                f"### [{finding['severity'].upper()}] {finding['title']}",
+                f"**Location:** `{location}`",
+                "",
+                finding["explanation"],
+                "",
+                f"**Recommendation:** {finding['recommendation']}",
+                "",
+            ]
+        )
+    return PlainTextResponse(
+        content="\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="review-{review.id}.md"'},
+    )
 
 
 @app.get("/api/v1/reviews/{review_id}", response_model=ReviewDetailResponse, tags=["reviews"])

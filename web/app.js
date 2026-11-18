@@ -197,8 +197,20 @@ async function showReview(id) {
   $('review-status').textContent = review.status;
   const summary = $('review-summary');
   summary.classList.remove('hidden');
-  summary.innerHTML = `<span class="eyebrow">Review summary · ${escapeHtml(review.prompt_version)}</span><p>${escapeHtml(review.summary || 'No summary was generated for this review.')}</p>`;
+  summary.innerHTML = `<div class="summary-heading"><span class="eyebrow">Review summary · ${escapeHtml(review.prompt_version)}</span><span class="export-actions"><button data-export="markdown" type="button">Markdown</button><button data-export="json" type="button">JSON</button></span></div><p>${escapeHtml(review.summary || 'No summary was generated for this review.')}</p>`;
+  summary.querySelectorAll('[data-export]').forEach((button) => { button.onclick = () => exportReview(id, button.dataset.export); });
   $('findings').innerHTML = review.findings.map((finding) => `<article class="finding ${escapeHtml(finding.severity)}"><div class="finding-title">${escapeHtml(finding.title)}</div><div class="finding-meta">${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.file_path)}${finding.line_number ? `:${finding.line_number}` : ''}</div><p>${escapeHtml(finding.explanation)}</p><p><strong>Recommendation:</strong> ${escapeHtml(finding.recommendation)}</p>${sourceContext(finding)}</article>`).join('') || '<div class="empty-state">No findings detected.</div>';
+}
+
+async function exportReview(reviewId, format) {
+  const response = await api(`/api/v1/reviews/${reviewId}/export?format=${format}`);
+  if (!response.ok) return toast('Could not export this review');
+  const blob = await response.blob();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `review-${reviewId}.${format === 'markdown' ? 'md' : 'json'}`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function sourceContext(finding) {

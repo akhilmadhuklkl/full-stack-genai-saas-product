@@ -94,6 +94,9 @@ textarea { min-height: 190px; resize: vertical; font-family: "SFMono-Regular", C
 .stream-output { min-height: 170px; max-height: 280px; overflow: auto; padding: 18px; background: #202c2d; color: #e3f2db; border-radius: 12px; font-family: monospace; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
 .review-summary { margin-top: 14px; padding: 15px 17px; border: 1px solid #dfe8d8; border-radius: 11px; background: #f3f8e9; }
 .review-summary .eyebrow { color: #718524; }
+.summary-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.export-actions { display: flex; gap: 5px; }
+.export-actions button { border: 1px solid #cddbb5; border-radius: 6px; background: white; color: #65741c; padding: 5px 7px; font-size: 10px; font-weight: 800; }
 .review-summary p { color: #4f5f52; font-size: 13px; line-height: 1.6; margin: 8px 0 0; white-space: pre-wrap; }
 .empty-state { color: #9ba9a1; font-size: 13px; padding: 15px 0; }
 .findings { display: grid; gap: 10px; margin-top: 16px; }
