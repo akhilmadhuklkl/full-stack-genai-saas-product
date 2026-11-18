@@ -13,7 +13,7 @@
         <div class="eyebrow">Workspace</div>
         <div id="project-list" class="project-list"></div>
         <button id="new-project" class="ghost-button" type="button">+ New project</button>
-        <div class="sidebar-footer"><span id="health-dot" class="status-dot"></span><span id="health-label">Checking system health…</span></div>
+        <div class="sidebar-footer" role="status" aria-live="polite"><span id="health-dot" class="status-dot"></span><span id="health-label">Checking system health…</span></div>
       </aside>
 
       <main class="main-content">
@@ -67,11 +67,11 @@
             </section>
 
             <section class="panel review-panel">
-              <div class="section-heading"><div><span class="eyebrow">AI review</span><h2>Review signal</h2></div><span id="review-status" class="status-badge">Ready</span></div>
+              <div class="section-heading"><div><span class="eyebrow">AI review</span><h2>Review signal</h2></div><span id="review-status" class="status-badge" role="status" aria-live="polite">Ready</span></div>
               <p class="muted">Forge reads the files in your selected project and streams the analysis back as it works.</p>
               <button id="run-review" class="primary-button review-button" type="button" disabled>Run local review <span>↗</span></button>
               <div id="job-meta" class="job-meta hidden"></div>
-              <div id="stream-output" class="stream-output"><div class="empty-state">Your review narrative will appear here.</div></div>
+              <div id="stream-output" class="stream-output" role="log" aria-live="polite"><div class="empty-state">Your review narrative will appear here.</div></div>
               <div id="review-summary" class="review-summary hidden"></div>
               <div class="findings-toolbar"><span class="eyebrow">Findings</span><select id="severity-filter"><option value="">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
               <div id="findings" class="findings"></div>
@@ -86,7 +86,7 @@
               </div>
               <div class="history-block">
                 <div class="section-heading compact"><div><span class="eyebrow">History</span><h3>Previous reviews</h3></div><select id="review-status-filter"><option value="">All statuses</option><option value="queued">Queued</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option></select></div>
-                <input id="review-search" class="compact-input" placeholder="Search review summaries" />
+                <label class="sr-only" for="review-search">Search review summaries</label><input id="review-search" class="compact-input" placeholder="Search review summaries" />
                 <div id="review-history" class="review-history"><div class="empty-state">No review runs yet.</div></div>
                 <div class="history-pagination"><button id="history-previous" class="text-button" type="button">← Previous</button><span id="history-page">Page 1</span><button id="history-next" class="text-button" type="button">Next →</button></div>
               </div>
