@@ -17,6 +17,7 @@ class Settings:
     auth_refresh_token_ttl_seconds: int
     ollama_timeout_seconds: float
     job_stale_seconds: int
+    cors_origins: tuple[str, ...]
 
 
 def load_settings() -> Settings:
@@ -33,6 +34,11 @@ def load_settings() -> Settings:
         auth_refresh_token_ttl_seconds=int(os.getenv("AUTH_REFRESH_TOKEN_TTL_SECONDS", "2592000")),
         ollama_timeout_seconds=float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120")),
         job_stale_seconds=int(os.getenv("JOB_STALE_SECONDS", "900")),
+        cors_origins=tuple(
+            origin.strip()
+            for origin in os.getenv("CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",")
+            if origin.strip()
+        ),
     )
 
 

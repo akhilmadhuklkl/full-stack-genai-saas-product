@@ -130,6 +130,8 @@ must not be committed to the repository.
 - Every HTTP response includes `X-Request-ID`.
 - HTTP responses include browser security headers such as `X-Content-Type-Options`,
   `X-Frame-Options`, and a restrictive Content Security Policy.
+- Cross-origin access is restricted by the comma-separated `CORS_ORIGINS` allowlist;
+  never use `*` together with credentialed cookies.
 - The same ID is included in request completion and unhandled-error logs.
 
 When reporting a failure, include the request ID, job ID, endpoint, and approximate time,
