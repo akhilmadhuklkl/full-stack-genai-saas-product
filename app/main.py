@@ -35,7 +35,7 @@ from app.db.models import (
 from app.db.session import SessionLocal, create_tables, engine, get_db
 from app.dependencies import get_current_user
 from app.email import EmailDeliveryError, send_email
-from app.limits import login_attempt_limiter, review_rate_limiter
+from app.limits import email_action_limiter, login_attempt_limiter, review_rate_limiter
 from app.observability import (
     CSRFMiddleware,
     RequestLoggingMiddleware,
@@ -321,7 +321,10 @@ def _consume_email_token(database: Session, raw_token: str, purpose: str) -> Ema
 def request_email_verification(
     request: EmailRequest, database: Session = Depends(get_db)
 ) -> dict[str, str]:
-    user = database.query(User).filter(User.email == request.email.strip().lower()).one_or_none()
+    email = request.email.strip().lower()
+    email_action_limiter.check(email)
+    email_action_limiter.record_failure(email)
+    user = database.query(User).filter(User.email == email).one_or_none()
     if user is not None and not user.email_verified:
         _send_email_token(database, user, "verify_email")
     return {"message": "If the account exists, a verification email has been sent."}
@@ -344,7 +347,10 @@ def confirm_email_verification(
 def request_password_reset(
     request: EmailRequest, database: Session = Depends(get_db)
 ) -> dict[str, str]:
-    user = database.query(User).filter(User.email == request.email.strip().lower()).one_or_none()
+    email = request.email.strip().lower()
+    email_action_limiter.check(email)
+    email_action_limiter.record_failure(email)
+    user = database.query(User).filter(User.email == email).one_or_none()
     if user is not None:
         _send_email_token(database, user, "password_reset")
     return {"message": "If the account exists, a password reset email has been sent."}

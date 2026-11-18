@@ -47,7 +47,8 @@ and a documented source-code retention policy.
 
 Password reset and email verification use one-time hashed database tokens. Local development
 uses a console email adapter; production requires `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`,
-and a verified `EMAIL_FROM` identity. Tokens are never returned by the API.
+and a verified `EMAIL_FROM` identity. Requests are throttled per email address, and tokens
+are never returned by the API.
 See `docs/EMAIL_SETUP.md` for configuration guidance.
 
 ## Pre-production checklist

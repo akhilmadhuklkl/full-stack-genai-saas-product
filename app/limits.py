@@ -140,3 +140,4 @@ class RedisReviewRateLimiter(ReviewRateLimiter):
 
 review_rate_limiter = RedisReviewRateLimiter(settings.redis_url)
 login_attempt_limiter = LoginAttemptLimiter()
+email_action_limiter = LoginAttemptLimiter(max_attempts=3, window_minutes=15)
