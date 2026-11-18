@@ -194,6 +194,10 @@ async function showReview(id) {
   const response = await api(`/api/v1/reviews/${id}${severity ? `?severity=${encodeURIComponent(severity)}` : ''}`);
   if (!response.ok) return;
   const review = await response.json();
+  $('review-status').textContent = review.status;
+  const summary = $('review-summary');
+  summary.classList.remove('hidden');
+  summary.innerHTML = `<span class="eyebrow">Review summary · ${escapeHtml(review.prompt_version)}</span><p>${escapeHtml(review.summary || 'No summary was generated for this review.')}</p>`;
   $('findings').innerHTML = review.findings.map((finding) => `<article class="finding ${escapeHtml(finding.severity)}"><div class="finding-title">${escapeHtml(finding.title)}</div><div class="finding-meta">${escapeHtml(finding.severity.toUpperCase())} · ${escapeHtml(finding.file_path)}${finding.line_number ? `:${finding.line_number}` : ''}</div><p>${escapeHtml(finding.explanation)}</p><p><strong>Recommendation:</strong> ${escapeHtml(finding.recommendation)}</p>${sourceContext(finding)}</article>`).join('') || '<div class="empty-state">No findings detected.</div>';
 }
 
