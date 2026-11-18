@@ -23,6 +23,7 @@ build/
 *.db
 *.sqlite
 *.log
+evals/results/
 
 # IDE and OS
 .idea/
